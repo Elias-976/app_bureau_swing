@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<categories>
+       <categorie id="1">
+            <nom>Eveil</nom>
+			<code>M5</code>
+            <annee_min>2022</annee_min>
+			<annee_max>2026</annee_max>
+        </categorie>
+		<categorie id="2">
+            <nom>Atomes</nom>
+			<code>M7</code>
+            <annee_min>2020</annee_min>
+			<annee_max>2021</annee_max>
+        </categorie>
+		<categorie id="3">
+            <nom>Poussins</nom>
+			<code>M9</code>
+            <annee_min>2018</annee_min>
+			<annee_max>2019</annee_max>
+        </categorie>
+		<categorie id="4">
+            <nom>Pupilles</nom>
+			<code>M11</code>
+            <annee_min>2016</annee_min>
+			<annee_max>2017</annee_max>
+        </categorie>
+		<categorie id="5">
+            <nom>Benjamins</nom>
+			<code>M13</code>
+            <annee_min>2014</annee_min>
+			<annee_max>2015</annee_max>
+        </categorie>
+		<categorie id="6">
+            <nom>Minimes</nom>
+			<code>M15</code>
+            <annee_min>2012</annee_min>
+			<annee_max>2013</annee_max>
+        </categorie>
+		<categorie id="7">
+            <nom>Cadets</nom>
+			<code>M17</code>
+            <annee_min>2010</annee_min>
+			<annee_max>2011</annee_max>
+        </categorie>
+  		<categorie id="8">
+            <nom>Juniors</nom>
+			<code>M20</code>
+            <annee_min>2007</annee_min>
+			<annee_max>2009</annee_max>
+        </categorie>
+  		<categorie id="9">
+            <nom>Séniors</nom>
+			<code></code>
+            <annee_min>1988</annee_min>
+			<annee_max>2006</annee_max>
+        </categorie>
+  		<categorie id="10">
+            <nom>Vétérans</nom>
+			<code></code>
+            <annee_min>1930</annee_min>
+			<annee_max>1987</annee_max>
+        </categorie>
+</categories>
