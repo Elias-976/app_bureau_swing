@@ -72,14 +72,38 @@ public class AdherentManager {
     }
 
     /**
-     * Recherche des adhérents selon un critère (nom, prénom ou email).
+     * Recherche des adhérents dont le nom, le prénom, le nom de naissance
+     * ou l'email contient le critère fourni (insensible à la casse).
      *
-     * @param critere la chaîne de recherche (insensible à la casse)
-     * @return la liste des adhérents correspondants
+     * <p>Si le critère est null ou vide, retourne l'intégralité de la liste.</p>
+     *
+     * @param critere la chaîne de recherche
+     * @return la liste des adhérents correspondants (jamais null)
      */
     public List<Adherent> rechercherAdherent(String critere) {
-        // TODO : implémenter dans US2
-        return new ArrayList<>();
+        if (critere == null || critere.isBlank()) {
+            return new ArrayList<>(listeAdherents);
+        }
+
+        String critereNormalise = critere.trim().toLowerCase();
+
+        List<Adherent> resultats = new ArrayList<>();
+        for (Adherent a : listeAdherents) {
+            boolean correspondNom            = a.getNom() != null
+                    && a.getNom().toLowerCase().contains(critereNormalise);
+            boolean correspondPrenom         = a.getPrenom() != null
+                    && a.getPrenom().toLowerCase().contains(critereNormalise);
+            boolean correspondNomNaissance   = a.getNomNaissance() != null
+                    && a.getNomNaissance().toLowerCase().contains(critereNormalise);
+            boolean correspondEmail          = a.getEmail() != null
+                    && a.getEmail().toLowerCase().contains(critereNormalise);
+
+            if (correspondNom || correspondPrenom
+                    || correspondNomNaissance || correspondEmail) {
+                resultats.add(a);
+            }
+        }
+        return resultats;
     }
 
     /**
