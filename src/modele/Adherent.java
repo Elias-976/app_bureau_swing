@@ -1,12 +1,17 @@
 package modele;
 
+import java.io.Serial;
+import java.io.Serializable;
 import java.time.LocalDate;
 import java.time.Period;
 
 /**
  * Classe métier représentant un adhérent du Cercle d'Escrime de Vandœuvre.
  */
-public class Adherent {
+public class Adherent implements Serializable {
+
+    @Serial
+    private static final long serialVersionUID = 1L;
 
     // ── Attributs ──────────────────────────────────────────────────────────────
     private int       id;

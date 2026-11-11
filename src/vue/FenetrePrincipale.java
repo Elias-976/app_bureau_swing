@@ -6,19 +6,37 @@ import java.awt.*;
 /**
  * Fenêtre principale de l'application GEA — Cercle d'Escrime de Vandœuvre.
  * Sert de conteneur racine de l'interface graphique (architecture MVC).
+ * Expose tous les composants interactifs via des getters pour les contrôleurs.
  */
 public class FenetrePrincipale extends JFrame {
 
-    // ── Composants de navigation ───────────────────────────────────────────────
+    // ── Éléments de menu (exposés aux contrôleurs) ─────────────────────────────
     private JMenuBar  barreMenus;
-    private JMenu     menuAdherents;
-    private JMenu     menuClubs;
-    private JMenu     menuFinances;
-    private JMenu     menuSauvegarde;
 
-    private JPanel    panneauPrincipal;
-    private JLabel    labelBienvenue;
-    private JPanel    panneauBoutons;
+    // Menu Adhérents
+    private JMenu     menuAdherents;
+    private JMenuItem menuItemNouvelAdherent;
+    private JMenuItem menuItemRechercherAdherent;
+    private JMenuItem menuItemQuitter;
+
+    // Menu Clubs
+    private JMenu     menuClubs;
+    private JMenuItem menuItemAnnuaireClubs;
+
+    // Menu Finances
+    private JMenu     menuFinances;
+    private JMenuItem menuItemRecapitulatif;
+
+    // Menu Sauvegarde
+    private JMenu     menuSauvegarde;
+    private JMenuItem menuItemExporter;
+    private JMenuItem menuItemImporter;
+
+    // ── Boutons d'accès rapide (exposés aux contrôleurs) ──────────────────────
+    private JButton btnNouvelAdherent;
+    private JButton btnRecherche;
+    private JButton btnAnnuaire;
+    private JButton btnFinances;
 
     // ── Constructeur ───────────────────────────────────────────────────────────
 
@@ -30,88 +48,99 @@ public class FenetrePrincipale extends JFrame {
 
     // ── Initialisation ─────────────────────────────────────────────────────────
 
-    /**
-     * Crée et dispose tous les composants graphiques de la fenêtre principale.
-     */
     private void initialiserComposants() {
         // ── Barre de menus ─────────────────────────────────────────────────────
         barreMenus = new JMenuBar();
 
-        menuAdherents  = new JMenu("Adhérents");
-        menuClubs      = new JMenu("Clubs");
-        menuFinances   = new JMenu("Finances");
-        menuSauvegarde = new JMenu("Sauvegarde");
+        // — Menu Adhérents —
+        menuAdherents              = new JMenu("Adhérents");
+        menuItemNouvelAdherent     = new JMenuItem("Nouvel adhérent");
+        menuItemRechercherAdherent = new JMenuItem("Rechercher un adhérent");
+        menuItemQuitter            = new JMenuItem("Quitter");
 
-        // Items du menu Adhérents (remplis plus tard dans les US)
-        menuAdherents.add(new JMenuItem("Nouvel adhérent"));
-        menuAdherents.add(new JMenuItem("Rechercher un adhérent"));
+        menuAdherents.add(menuItemNouvelAdherent);
+        menuAdherents.add(menuItemRechercherAdherent);
         menuAdherents.addSeparator();
-        menuAdherents.add(new JMenuItem("Quitter"));
+        menuAdherents.add(menuItemQuitter);
 
-        // Items du menu Clubs
-        menuClubs.add(new JMenuItem("Annuaire des clubs"));
+        // — Menu Clubs —
+        menuClubs             = new JMenu("Clubs");
+        menuItemAnnuaireClubs = new JMenuItem("Annuaire des clubs");
+        menuClubs.add(menuItemAnnuaireClubs);
 
-        // Items du menu Finances
-        menuFinances.add(new JMenuItem("Récapitulatif financier"));
+        // — Menu Finances —
+        menuFinances          = new JMenu("Finances");
+        menuItemRecapitulatif = new JMenuItem("Récapitulatif financier");
+        menuFinances.add(menuItemRecapitulatif);
 
-        // Items du menu Sauvegarde
-        menuSauvegarde.add(new JMenuItem("Exporter les données"));
-        menuSauvegarde.add(new JMenuItem("Importer les données"));
+        // — Menu Sauvegarde —
+        menuSauvegarde    = new JMenu("Sauvegarde");
+        menuItemExporter  = new JMenuItem("Exporter les données");
+        menuItemImporter  = new JMenuItem("Importer les données");
+        menuSauvegarde.add(menuItemExporter);
+        menuSauvegarde.add(menuItemImporter);
 
         barreMenus.add(menuAdherents);
         barreMenus.add(menuClubs);
         barreMenus.add(menuFinances);
         barreMenus.add(menuSauvegarde);
-
         setJMenuBar(barreMenus);
 
         // ── Panneau central ────────────────────────────────────────────────────
-        panneauPrincipal = new JPanel(new BorderLayout(10, 10));
+        JPanel panneauPrincipal = new JPanel(new BorderLayout(10, 10));
         panneauPrincipal.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
         panneauPrincipal.setBackground(Color.WHITE);
 
-        // Message de bienvenue centré
-        labelBienvenue = new JLabel(
+        JLabel labelBienvenue = new JLabel(
                 "<html><center><h2>Bienvenue dans l'application GEA</h2>"
                 + "<p>Cercle d'Escrime de Vandœuvre — Maison des Ligues de Lorraine</p></center></html>",
                 SwingConstants.CENTER);
         panneauPrincipal.add(labelBienvenue, BorderLayout.CENTER);
 
-        // Panneau de boutons d'accès rapide (bas)
-        panneauBoutons = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 0));
+        // ── Boutons d'accès rapide ─────────────────────────────────────────────
+        btnNouvelAdherent = new JButton("➕ Nouvel adhérent");
+        btnRecherche      = new JButton("🔍 Rechercher");
+        btnAnnuaire       = new JButton("📋 Annuaire clubs");
+        btnFinances       = new JButton("💰 Finances");
+
+        JPanel panneauBoutons = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 0));
         panneauBoutons.setBackground(Color.WHITE);
-
-        JButton btnNouvelAdherent  = new JButton("➕ Nouvel adhérent");
-        JButton btnRecherche       = new JButton("🔍 Rechercher");
-        JButton btnAnnuaire        = new JButton("📋 Annuaire clubs");
-        JButton btnFinances        = new JButton("💰 Finances");
-
         panneauBoutons.add(btnNouvelAdherent);
         panneauBoutons.add(btnRecherche);
         panneauBoutons.add(btnAnnuaire);
         panneauBoutons.add(btnFinances);
 
         panneauPrincipal.add(panneauBoutons, BorderLayout.SOUTH);
-
         add(panneauPrincipal);
     }
 
-    /**
-     * Configure les propriétés générales de la JFrame.
-     */
     private void configurerFenetre() {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(900, 600);
         setMinimumSize(new Dimension(700, 450));
-        setLocationRelativeTo(null); // centrer sur l'écran
+        setLocationRelativeTo(null);
         setVisible(true);
     }
 
-    // ── Getters (pour les contrôleurs) ─────────────────────────────────────────
+    // ── Getters — Menus ────────────────────────────────────────────────────────
 
-    public JMenu getMenuAdherents()  { return menuAdherents; }
-    public JMenu getMenuClubs()      { return menuClubs; }
-    public JMenu getMenuFinances()   { return menuFinances; }
-    public JMenu getMenuSauvegarde() { return menuSauvegarde; }
+    public JMenu     getMenuAdherents()               { return menuAdherents; }
+    public JMenu     getMenuClubs()                   { return menuClubs; }
+    public JMenu     getMenuFinances()                { return menuFinances; }
+    public JMenu     getMenuSauvegarde()              { return menuSauvegarde; }
+
+    public JMenuItem getMenuItemNouvelAdherent()      { return menuItemNouvelAdherent; }
+    public JMenuItem getMenuItemRechercherAdherent()  { return menuItemRechercherAdherent; }
+    public JMenuItem getMenuItemQuitter()             { return menuItemQuitter; }
+    public JMenuItem getMenuItemAnnuaireClubs()       { return menuItemAnnuaireClubs; }
+    public JMenuItem getMenuItemRecapitulatif()       { return menuItemRecapitulatif; }
+    public JMenuItem getMenuItemExporter()            { return menuItemExporter; }
+    public JMenuItem getMenuItemImporter()            { return menuItemImporter; }
+
+    // ── Getters — Boutons rapides ──────────────────────────────────────────────
+
+    public JButton getBtnNouvelAdherent()  { return btnNouvelAdherent; }
+    public JButton getBtnRecherche()       { return btnRecherche; }
+    public JButton getBtnAnnuaire()        { return btnAnnuaire; }
+    public JButton getBtnFinances()        { return btnFinances; }
 }
-

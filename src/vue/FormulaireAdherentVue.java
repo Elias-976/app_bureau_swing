@@ -295,3 +295,4 @@ public class FormulaireAdherentVue extends JDialog {
     public void setChampNomRespLegal(String v)   { champNomRespLegal.setText(v); }
     public void setChampPrenomRespLegal(String v){ champPrenomRespLegal.setText(v); }
 }
+
