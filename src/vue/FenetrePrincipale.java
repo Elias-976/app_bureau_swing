@@ -114,3 +114,4 @@ public class FenetrePrincipale extends JFrame {
     public JMenu getMenuFinances()   { return menuFinances; }
     public JMenu getMenuSauvegarde() { return menuSauvegarde; }
 }
+

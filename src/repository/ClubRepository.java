@@ -32,3 +32,4 @@ public class ClubRepository {
         // TODO : implémenter dans US8
     }
 }
+
