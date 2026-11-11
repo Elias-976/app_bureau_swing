@@ -65,3 +65,4 @@ public class Club {
     public String getBenevoleEmail()                  { return benevoleEmail; }
     public void setBenevoleEmail(String email)        { this.benevoleEmail = email; }
 }
+

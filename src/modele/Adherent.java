@@ -137,3 +137,4 @@ public class Adherent {
     public String getPrenomRespLegal()        { return prenomRespLegal; }
     public void setPrenomRespLegal(String p)  { this.prenomRespLegal = p; }
 }
+

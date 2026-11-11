@@ -64,3 +64,4 @@ public class Categorie {
     public double getCotisation()             { return cotisation; }
     public void setCotisation(double c)       { this.cotisation = c; }
 }
+
