@@ -2,6 +2,7 @@ package controleur;
 
 import manager.AdherentManager;
 import manager.SauvegardeManager;
+import manager.ValidateurAdherent;
 import modele.Adherent;
 import modele.Categorie;
 import repository.CategorieRepository;
@@ -16,8 +17,7 @@ import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.io.File;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
+import java.time.Period;
 import java.util.List;
 import java.util.Locale;
 
@@ -36,10 +36,6 @@ public class AdherentControleur {
     private final SauvegardeManager sauvegardeManager;
     private final CategorieRepository categorieRepository;
     private final ClubRepository    clubRepository;
-
-    /** Format de date attendu dans les formulaires */
-    private static final DateTimeFormatter FORMAT_DATE =
-            DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     /** Chemin relatif vers le fichier des catégories */
     private static final String CHEMIN_CATEGORIES = "document/categorie.xml";
@@ -106,78 +102,10 @@ public class AdherentControleur {
     public void ouvrirFormulaireAjout() {
         FormulaireAdherentVue formulaire =
                 new FormulaireAdherentVue(fenetrePrincipale, "Nouvel adhérent");
-        formulaire.ajouterEcouteurValider(e -> validerAjout(formulaire));
+        brancherMiseAJourRespLegal(formulaire);
+        formulaire.ajouterEcouteurValider(
+                e -> enregistrerAdherentDepuisFormulaire(formulaire, null, null));
         formulaire.setVisible(true);
-    }
-
-    private void validerAjout(FormulaireAdherentVue formulaire) {
-        formulaire.effacerErreur();
-
-        String nom     = formulaire.getChampNom();
-        String prenom  = formulaire.getChampPrenom();
-        String dateStr = formulaire.getChampDateNaissance();
-
-        if (nom.isBlank()) {
-            formulaire.afficherErreur("Le nom est obligatoire.");
-            return;
-        }
-        if (prenom.isBlank()) {
-            formulaire.afficherErreur("Le prénom est obligatoire.");
-            return;
-        }
-        if (dateStr.isBlank()) {
-            formulaire.afficherErreur("La date de naissance est obligatoire (JJ/MM/AAAA).");
-            return;
-        }
-
-        LocalDate dateNaissance;
-        try {
-            dateNaissance = LocalDate.parse(dateStr, FORMAT_DATE);
-        } catch (DateTimeParseException ex) {
-            formulaire.afficherErreur("Date invalide. Format attendu : JJ/MM/AAAA");
-            return;
-        }
-
-        Adherent nouvelAdherent = new Adherent(
-                nom, prenom,
-                formulaire.getChampNomNaissance(),
-                dateNaissance,
-                formulaire.getChampAdresse(),
-                formulaire.getChampCodePostal(),
-                formulaire.getChampVille(),
-                formulaire.getChampTelephone(),
-                formulaire.getChampEmail(),
-                formulaire.getArme(),
-                formulaire.getPratique(),
-                formulaire.getLateralite(),
-                formulaire.getChampNomRespLegal(),
-                formulaire.getChampPrenomRespLegal()
-        );
-
-        if (nouvelAdherent.estMineur()) {
-            formulaire.afficherRespLegal(true);
-            if (formulaire.getChampNomRespLegal().isBlank()
-                    || formulaire.getChampPrenomRespLegal().isBlank()) {
-                formulaire.afficherErreur(
-                        "L'adhérent est mineur : renseignez le responsable légal.");
-                return;
-            }
-        }
-
-        try {
-            manager.ajouterAdherent(nouvelAdherent);
-        } catch (IllegalArgumentException ex) {
-            formulaire.afficherErreur(ex.getMessage());
-            return;
-        }
-
-        JOptionPane.showMessageDialog(
-                formulaire,
-                "Adhérent « " + nom + " " + prenom + " » enregistré avec succès !",
-                "Succès",
-                JOptionPane.INFORMATION_MESSAGE);
-
-        formulaire.dispose();
     }
 
     // ── Action : Rechercher un adhérent ───────────────────────────────────────
@@ -258,8 +186,10 @@ public class AdherentControleur {
         formulaire.setChampNom(adherent.getNom());
         formulaire.setChampPrenom(adherent.getPrenom());
         formulaire.setChampNomNaissance(adherent.getNomNaissance());
-        if (adherent.getDateNaissance() != null)
-            formulaire.setChampDateNaissance(adherent.getDateNaissance().format(FORMAT_DATE));
+        if (adherent.getDateNaissance() != null) {
+            formulaire.setChampDateNaissance(
+                    adherent.getDateNaissance().format(ValidateurAdherent.FORMAT_DATE));
+        }
         formulaire.setChampAdresse(adherent.getAdresse());
         formulaire.setChampCodePostal(adherent.getCodePostal());
         formulaire.setChampVille(adherent.getVille());
@@ -270,35 +200,44 @@ public class AdherentControleur {
         formulaire.setLateralite(adherent.getLateralite());
         formulaire.setChampNomRespLegal(adherent.getNomRespLegal());
         formulaire.setChampPrenomRespLegal(adherent.getPrenomRespLegal());
-        if (adherent.estMineur()) formulaire.afficherRespLegal(true);
+        formulaire.afficherRespLegal(
+                adherent.getDateNaissance() != null && adherent.estMineur());
 
-        formulaire.ajouterEcouteurValider(e -> validerModification(adherent.getId(), formulaire, vueRecherche));
+        brancherMiseAJourRespLegal(formulaire);
+        formulaire.ajouterEcouteurValider(
+                e -> enregistrerAdherentDepuisFormulaire(formulaire, adherent.getId(), vueRecherche));
         formulaire.setVisible(true);
     }
 
-    private void validerModification(int idOriginal,
-                                      FormulaireAdherentVue formulaire,
-                                      RechercheAdherentVue vueRecherche) {
+    /**
+     * Factorise la validation et l'enregistrement (création ou modification)
+     * d'un adhérent depuis le formulaire Swing.
+     */
+    private void enregistrerAdherentDepuisFormulaire(FormulaireAdherentVue formulaire,
+                                                    Integer idOriginal,
+                                                    RechercheAdherentVue vueRecherche) {
         formulaire.effacerErreur();
-
-        String nom     = formulaire.getChampNom();
-        String prenom  = formulaire.getChampPrenom();
-        String dateStr = formulaire.getChampDateNaissance();
-
-        if (nom.isBlank()) { formulaire.afficherErreur("Le nom est obligatoire."); return; }
-        if (prenom.isBlank()) { formulaire.afficherErreur("Le prénom est obligatoire."); return; }
-        if (dateStr.isBlank()) { formulaire.afficherErreur("La date de naissance est obligatoire."); return; }
 
         LocalDate dateNaissance;
         try {
-            dateNaissance = LocalDate.parse(dateStr, FORMAT_DATE);
-        } catch (DateTimeParseException ex) {
-            formulaire.afficherErreur("Date invalide. Format attendu : JJ/MM/AAAA");
+            dateNaissance = ValidateurAdherent.parserDateNaissance(
+                    formulaire.getChampDateNaissance());
+        } catch (IllegalArgumentException ex) {
+            formulaire.afficherErreur(ex.getMessage());
             return;
         }
 
-        Adherent modifie = new Adherent(
-                idOriginal, nom, prenom,
+        boolean mineur = Period.between(dateNaissance, LocalDate.now()).getYears() < 18;
+        formulaire.afficherRespLegal(mineur);
+
+        String nomRespLegal    = mineur ? formulaire.getChampNomRespLegal()    : "";
+        String prenomRespLegal = mineur ? formulaire.getChampPrenomRespLegal() : "";
+
+        int id = (idOriginal != null) ? idOriginal : 0;
+        Adherent adherent = new Adherent(
+                id,
+                formulaire.getChampNom(),
+                formulaire.getChampPrenom(),
                 formulaire.getChampNomNaissance(),
                 dateNaissance,
                 formulaire.getChampAdresse(),
@@ -309,36 +248,54 @@ public class AdherentControleur {
                 formulaire.getArme(),
                 formulaire.getPratique(),
                 formulaire.getLateralite(),
-                formulaire.getChampNomRespLegal(),
-                formulaire.getChampPrenomRespLegal()
+                nomRespLegal,
+                prenomRespLegal
         );
 
-        if (modifie.estMineur()) {
-            formulaire.afficherRespLegal(true);
-            if (formulaire.getChampNomRespLegal().isBlank()
-                    || formulaire.getChampPrenomRespLegal().isBlank()) {
-                formulaire.afficherErreur("L'adhérent est mineur : renseignez le responsable légal.");
-                return;
-            }
-        }
-
         try {
-            manager.modifierAdherent(modifie);
+            if (idOriginal == null) {
+                manager.ajouterAdherent(adherent);
+            } else {
+                manager.modifierAdherent(adherent);
+            }
         } catch (IllegalArgumentException ex) {
             formulaire.afficherErreur(ex.getMessage());
             return;
         }
 
-        JOptionPane.showMessageDialog(formulaire,
-                "Adhérent « " + nom + " " + prenom + " » modifié avec succès !",
-                "Succès", JOptionPane.INFORMATION_MESSAGE);
+        String action = (idOriginal == null) ? "enregistré" : "modifié";
+        JOptionPane.showMessageDialog(
+                formulaire,
+                "Adhérent « " + adherent.getNom() + " " + adherent.getPrenom()
+                        + " » " + action + " avec succès !",
+                "Succès",
+                JOptionPane.INFORMATION_MESSAGE);
 
         formulaire.dispose();
 
-        // Rafraîchir la vue de recherche si elle est ouverte
-        if (vueRecherche != null && vueRecherche.isVisible()) {
+        if (idOriginal != null && vueRecherche != null && vueRecherche.isVisible()) {
             vueRecherche.afficherResultats(
                     manager.rechercherAdherent(vueRecherche.getCritereRecherche()));
+        }
+    }
+
+    /** Met à jour dynamiquement la visibilité du responsable légal selon la date saisie. */
+    private void brancherMiseAJourRespLegal(FormulaireAdherentVue formulaire) {
+        formulaire.ajouterEcouteurDateNaissance(() -> mettreAJourVisibiliteRespLegal(formulaire));
+    }
+
+    private void mettreAJourVisibiliteRespLegal(FormulaireAdherentVue formulaire) {
+        String dateStr = formulaire.getChampDateNaissance();
+        if (dateStr.isBlank()) {
+            formulaire.afficherRespLegal(false);
+            return;
+        }
+        try {
+            LocalDate dateNaissance = ValidateurAdherent.parserDateNaissance(dateStr);
+            boolean mineur = Period.between(dateNaissance, LocalDate.now()).getYears() < 18;
+            formulaire.afficherRespLegal(mineur);
+        } catch (IllegalArgumentException ignored) {
+            // Saisie intermédiaire incomplète ou invalide : ne pas clignoter
         }
     }
 

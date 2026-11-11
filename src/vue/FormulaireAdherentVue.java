@@ -2,6 +2,8 @@ package vue;
 
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import java.awt.*;
 import java.awt.event.ActionListener;
 
@@ -137,8 +139,8 @@ public class FormulaireAdherentVue extends JDialog {
         champNomRespLegal    = new JTextField(20);
         champPrenomRespLegal = new JTextField(20);
 
-        ajouterLigneFormulaire(panneauRespLegal, "Nom :",    champNomRespLegal,    0);
-        ajouterLigneFormulaire(panneauRespLegal, "Prénom :", champPrenomRespLegal, 1);
+        ajouterLigneFormulaire(panneauRespLegal, "Nom * :",    champNomRespLegal,    0);
+        ajouterLigneFormulaire(panneauRespLegal, "Prénom * :", champPrenomRespLegal, 1);
 
         // ── Assemblage vertical des sections ───────────────────────────────────
         panneauFormulaire.setLayout(new BoxLayout(panneauFormulaire, BoxLayout.Y_AXIS));
@@ -156,7 +158,7 @@ public class FormulaireAdherentVue extends JDialog {
         scrollPane.setBorder(null);
 
         // ── Étiquette d'erreur ─────────────────────────────────────────────────
-        labelErreur = new JLabel(" ");
+        labelErreur = new JLabel(" ", SwingConstants.LEFT);
         labelErreur.setForeground(Color.RED);
         labelErreur.setFont(labelErreur.getFont().deriveFont(Font.BOLD));
 
@@ -175,13 +177,16 @@ public class FormulaireAdherentVue extends JDialog {
         btnAnnuler.addActionListener(e -> dispose());
 
         JPanel panneauBoutons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
-        panneauBoutons.add(labelErreur);
         panneauBoutons.add(btnAnnuler);
         panneauBoutons.add(btnValider);
 
+        JPanel panneauSud = new JPanel(new BorderLayout(0, 8));
+        panneauSud.add(labelErreur,    BorderLayout.NORTH);
+        panneauSud.add(panneauBoutons, BorderLayout.SOUTH);
+
         // ── Assemblage global ──────────────────────────────────────────────────
-        panneauGlobal.add(scrollPane,     BorderLayout.CENTER);
-        panneauGlobal.add(panneauBoutons, BorderLayout.SOUTH);
+        panneauGlobal.add(scrollPane, BorderLayout.CENTER);
+        panneauGlobal.add(panneauSud, BorderLayout.SOUTH);
 
         add(panneauGlobal);
     }
@@ -221,18 +226,30 @@ public class FormulaireAdherentVue extends JDialog {
 
     /** Rend la section Responsable légal visible ou non (selon si l'adhérent est mineur). */
     public void afficherRespLegal(boolean visible) {
+        if (panneauRespLegal.isVisible() == visible) {
+            return;
+        }
         panneauRespLegal.setVisible(visible);
-        pack();
+        panneauRespLegal.revalidate();
+        panneauRespLegal.repaint();
+        if (isDisplayable()) {
+            Dimension tailleActuelle = getSize();
+            pack();
+            setSize(Math.max(tailleActuelle.width, getWidth()),
+                    Math.max(tailleActuelle.height, getHeight()));
+        }
     }
 
     /** Affiche un message d'erreur en rouge dans la zone dédiée. */
     public void afficherErreur(String message) {
         labelErreur.setText(message);
+        labelErreur.setToolTipText(message);
     }
 
     /** Efface le message d'erreur. */
     public void effacerErreur() {
         labelErreur.setText(" ");
+        labelErreur.setToolTipText(null);
     }
 
     /** Vide tous les champs du formulaire. */
@@ -251,7 +268,8 @@ public class FormulaireAdherentVue extends JDialog {
         comboArme.setSelectedIndex(0);
         comboPratique.setSelectedIndex(0);
         comboLateralite.setSelectedIndex(0);
-        labelErreur.setText(" ");
+        afficherRespLegal(false);
+        effacerErreur();
     }
 
     // ── Enregistrement des écouteurs (pour le contrôleur) ─────────────────────
@@ -259,6 +277,20 @@ public class FormulaireAdherentVue extends JDialog {
     /** Branche l'action déclenchée au clic sur "Valider". */
     public void ajouterEcouteurValider(ActionListener ecouteur) {
         btnValider.addActionListener(ecouteur);
+    }
+
+    /**
+     * Branche une action exécutée à chaque modification du champ date de naissance
+     * (permettant d'afficher ou masquer dynamiquement la section responsable légal).
+     *
+     * @param action action à déclencher lors d'un changement de texte
+     */
+    public void ajouterEcouteurDateNaissance(Runnable action) {
+        champDateNaissance.getDocument().addDocumentListener(new DocumentListener() {
+            @Override public void insertUpdate(DocumentEvent e)  { action.run(); }
+            @Override public void removeUpdate(DocumentEvent e)  { action.run(); }
+            @Override public void changedUpdate(DocumentEvent e) { action.run(); }
+        });
     }
 
     // ── Getters des valeurs saisies ────────────────────────────────────────────

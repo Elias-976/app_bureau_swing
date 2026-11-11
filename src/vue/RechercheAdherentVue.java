@@ -75,6 +75,7 @@ public class RechercheAdherentVue extends JDialog {
         btnEffacer.addActionListener(e -> {
             champRecherche.setText("");
             champRecherche.requestFocus();
+            btnRechercher.doClick();
         });
         panneauRecherche.add(btnEffacer);
 

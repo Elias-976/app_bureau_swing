@@ -31,36 +31,29 @@ public class AdherentManager {
     // ── Méthodes CRUD ──────────────────────────────────────────────────────────
 
     /**
-     * Ajoute un nouvel adhérent dans la liste.
+     * Ajoute un nouvel adhérent dans la liste après validation complète de ses champs.
      * Un identifiant unique lui est automatiquement attribué.
      *
      * @param adherent l'adhérent à ajouter
-     * @throws IllegalArgumentException si les champs obligatoires sont absents
+     * @throws IllegalArgumentException si l'adhérent est null ou invalide
      */
     public void ajouterAdherent(Adherent adherent) {
-        if (adherent == null)
-            throw new IllegalArgumentException("L'adhérent ne peut pas être null.");
-        if (adherent.getNom() == null || adherent.getNom().isBlank())
-            throw new IllegalArgumentException("Le nom de l'adhérent est obligatoire.");
-        if (adherent.getPrenom() == null || adherent.getPrenom().isBlank())
-            throw new IllegalArgumentException("Le prénom de l'adhérent est obligatoire.");
-        if (adherent.getDateNaissance() == null)
-            throw new IllegalArgumentException("La date de naissance est obligatoire.");
+        ValidateurAdherent.valider(adherent);
 
         adherent.setId(compteurId.getAndIncrement());
         listeAdherents.add(adherent);
     }
 
     /**
-     * Modifie les informations d'un adhérent existant identifié par son id.
+     * Modifie les informations d'un adhérent existant identifié par son id,
+     * après validation complète des nouvelles valeurs.
      * Remplace intégralement l'entrée correspondante dans la liste.
      *
      * @param adherentModifie l'adhérent avec les nouvelles valeurs (id doit correspondre)
-     * @throws IllegalArgumentException si l'adhérent est null ou introuvable
+     * @throws IllegalArgumentException si l'adhérent est null, invalide ou introuvable
      */
     public void modifierAdherent(Adherent adherentModifie) {
-        if (adherentModifie == null)
-            throw new IllegalArgumentException("L'adhérent modifié ne peut pas être null.");
+        ValidateurAdherent.valider(adherentModifie);
 
         for (int i = 0; i < listeAdherents.size(); i++) {
             if (listeAdherents.get(i).getId() == adherentModifie.getId()) {
@@ -244,8 +237,11 @@ public class AdherentManager {
      * @param liste la nouvelle liste d'adhérents
      */
     public void setListeAdherents(List<Adherent> liste) {
-        this.listeAdherents = liste;
-        int maxId = liste.stream().mapToInt(Adherent::getId).max().orElse(0);
+        if (liste == null) {
+            throw new IllegalArgumentException("La liste d'adhérents ne peut pas être null.");
+        }
+        this.listeAdherents = new ArrayList<>(liste);
+        int maxId = this.listeAdherents.stream().mapToInt(Adherent::getId).max().orElse(0);
         compteurId.set(maxId + 1);
     }
 }
