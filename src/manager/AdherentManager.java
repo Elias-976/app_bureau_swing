@@ -4,7 +4,10 @@ import modele.Adherent;
 import modele.Categorie;
 
 import java.util.ArrayList;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -110,15 +113,18 @@ public class AdherentManager {
 
     /**
      * Calcule le montant total des cotisations de tous les adhérents
-     * en déduisant leur catégorie à partir de leur âge.
+     * en déduisant leur catégorie à partir de leur année de naissance (ou âge).
      *
      * @param categories la liste des catégories avec leurs cotisations
      * @return le montant total en euros
      */
     public double calculerMontantTotal(List<Categorie> categories) {
+        if (categories == null) {
+            return 0.0;
+        }
         double total = 0.0;
         for (Adherent a : listeAdherents) {
-            Categorie cat = trouverCategorie(a.getAge(), categories);
+            Categorie cat = trouverCategorie(a, categories);
             if (cat != null) {
                 total += cat.getCotisation();
             }
@@ -136,44 +142,75 @@ public class AdherentManager {
         StringBuilder sb = new StringBuilder();
         sb.append("=== Récapitulatif financier — Cercle d'Escrime de Vandœuvre ===\n\n");
 
-        double totalGeneral = 0.0;
-        int sansCat = 0;
-
-        for (Categorie cat : categories) {
-            List<Adherent> membres = new ArrayList<>();
-            for (Adherent a : listeAdherents) {
-                if (cat.correspondAge(a.getAge())) {
-                    membres.add(a);
-                }
+        List<Categorie> listeCategories = (categories != null) ? categories : List.of();
+        Map<Categorie, List<Adherent>> parCategorie = new IdentityHashMap<>();
+        for (Categorie cat : listeCategories) {
+            if (cat != null) {
+                parCategorie.put(cat, new ArrayList<>());
             }
-            if (membres.isEmpty()) continue;
+        }
 
-            sb.append(String.format("── %s%s ──%n",
-                    cat.getLibelle(),
-                    cat.getCode().isBlank() ? "" : " (" + cat.getCode() + ")"));
-            sb.append(String.format("   Cotisation unitaire : %.2f €%n", cat.getCotisation()));
+        List<Adherent> sansCategorie = new ArrayList<>();
+        for (Adherent a : listeAdherents) {
+            Categorie cat = trouverCategorie(a, listeCategories);
+            if (cat != null && parCategorie.containsKey(cat)) {
+                parCategorie.get(cat).add(a);
+            } else {
+                sansCategorie.add(a);
+            }
+        }
+
+        double totalGeneral = 0.0;
+
+        for (Categorie cat : listeCategories) {
+            if (cat == null) continue;
+            List<Adherent> membres = parCategorie.get(cat);
+            if (membres == null || membres.isEmpty()) continue;
+
+            String suffixeCode = (cat.getCode() == null || cat.getCode().isBlank())
+                    ? "" : " (" + cat.getCode() + ")";
+            sb.append(String.format("── %s%s ──%n", cat.getLibelle(), suffixeCode));
+            sb.append(String.format(Locale.FRANCE, "   Cotisation unitaire : %.2f €%n", cat.getCotisation()));
             sb.append(String.format("   Nombre d'adhérents  : %d%n", membres.size()));
             double sousTot = membres.size() * cat.getCotisation();
-            sb.append(String.format("   Sous-total          : %.2f €%n", sousTot));
+            sb.append(String.format(Locale.FRANCE, "   Sous-total          : %.2f €%n", sousTot));
             for (Adherent a : membres) {
+                int age = (a.getDateNaissance() != null) ? a.getAge() : 0;
                 sb.append(String.format("     • %s %s (ID %d, %d ans)%n",
-                        a.getPrenom(), a.getNom(), a.getId(), a.getAge()));
+                        a.getPrenom(), a.getNom(), a.getId(), age));
             }
             sb.append("\n");
             totalGeneral += sousTot;
         }
 
-        // Adhérents sans catégorie correspondante
-        for (Adherent a : listeAdherents) {
-            if (trouverCategorie(a.getAge(), categories) == null) sansCat++;
-        }
-        if (sansCat > 0) {
-            sb.append(String.format("── Sans catégorie correspondante : %d adhérent(s) ──%n%n", sansCat));
+        if (!sansCategorie.isEmpty()) {
+            sb.append(String.format("── Sans catégorie correspondante : %d adhérent(s) ──%n%n",
+                    sansCategorie.size()));
         }
 
-        sb.append(String.format("TOTAL GÉNÉRAL : %.2f €%n", totalGeneral));
+        sb.append(String.format(Locale.FRANCE, "TOTAL GÉNÉRAL : %.2f €%n", totalGeneral));
         sb.append(String.format("Nombre total d'adhérents : %d%n", listeAdherents.size()));
         return sb.toString();
+    }
+
+    /**
+     * Trouve la catégorie correspondant à un adhérent (prioritairement selon son
+     * année de naissance, conformément aux règles FFE et au fichier XML).
+     *
+     * @param adherent   l'adhérent à classer
+     * @param categories la liste des catégories
+     * @return la catégorie trouvée, ou {@code null} si aucune ne correspond
+     */
+    public Categorie trouverCategorie(Adherent adherent, List<Categorie> categories) {
+        if (adherent == null || categories == null) {
+            return null;
+        }
+        for (Categorie cat : categories) {
+            if (cat != null && cat.correspondAdherent(adherent)) {
+                return cat;
+            }
+        }
+        return null;
     }
 
     /**
@@ -184,8 +221,13 @@ public class AdherentManager {
      * @return la catégorie trouvée, ou {@code null} si aucune ne correspond
      */
     public Categorie trouverCategorie(int age, List<Categorie> categories) {
+        if (categories == null) {
+            return null;
+        }
         for (Categorie cat : categories) {
-            if (cat.correspondAge(age)) return cat;
+            if (cat != null && cat.correspondAge(age)) {
+                return cat;
+            }
         }
         return null;
     }

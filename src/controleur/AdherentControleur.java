@@ -19,6 +19,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Contrôleur MVC pour la gestion des adhérents et de toute la fenêtre principale.
@@ -200,7 +201,7 @@ public class AdherentControleur {
             Adherent a = trouverParId(id);
             if (a != null) {
                 List<Categorie> cats = chargerCategories();
-                Categorie cat = manager.trouverCategorie(a.getAge(), cats);
+                Categorie cat = manager.trouverCategorie(a, cats);
                 FicheAdherentVue fiche = new FicheAdherentVue(fenetrePrincipale, a, cat);
                 // Bouton Modifier depuis la fiche
                 fiche.ajouterEcouteurModifier(ev -> {
@@ -405,18 +406,8 @@ public class AdherentControleur {
 
     private void ouvrirRecapitulatifFinancier() {
         List<Categorie> cats = chargerCategories();
-
-        // Si les cotisations sont toutes à 0, on propose de les saisir
-        boolean toutesNulles = cats.stream().allMatch(c -> c.getCotisation() == 0.0);
-        if (toutesNulles && !cats.isEmpty()) {
-            int choix = JOptionPane.showConfirmDialog(fenetrePrincipale,
-                    "Les cotisations ne sont pas encore configurées.\n" +
-                    "Voulez-vous saisir les montants maintenant ?",
-                    "Cotisations manquantes", JOptionPane.YES_NO_OPTION,
-                    JOptionPane.QUESTION_MESSAGE);
-            if (choix == JOptionPane.YES_OPTION) {
-                saisirCotisations(cats);
-            }
+        if (cats.isEmpty()) {
+            return;
         }
 
         if (manager.getListeAdherents().isEmpty()) {
@@ -439,7 +430,7 @@ public class AdherentControleur {
         dialog.setLayout(new java.awt.BorderLayout(8, 8));
 
         JLabel lblTotal = new JLabel(
-                String.format("  Total général des cotisations : %.2f €", total),
+                String.format(Locale.FRANCE, "  Total général des cotisations : %.2f €", total),
                 SwingConstants.LEFT);
         lblTotal.setFont(lblTotal.getFont().deriveFont(java.awt.Font.BOLD, 13f));
         lblTotal.setForeground(new java.awt.Color(0, 100, 0));
@@ -447,9 +438,20 @@ public class AdherentControleur {
         dialog.add(lblTotal, java.awt.BorderLayout.NORTH);
         dialog.add(scroll, java.awt.BorderLayout.CENTER);
 
+        JButton btnAjuster = new JButton("⚙ Ajuster les tarifs");
+        btnAjuster.addActionListener(e -> {
+            saisirCotisations(cats);
+            textArea.setText(manager.genererRapportParCategorie(cats));
+            textArea.setCaretPosition(0);
+            lblTotal.setText(String.format(Locale.FRANCE,
+                    "  Total général des cotisations : %.2f €",
+                    manager.calculerMontantTotal(cats)));
+        });
+
         JButton btnFermer = new JButton("✖ Fermer");
         btnFermer.addActionListener(e -> dialog.dispose());
         JPanel sud = new JPanel();
+        sud.add(btnAjuster);
         sud.add(btnFermer);
         dialog.add(sud, java.awt.BorderLayout.SOUTH);
 
@@ -458,19 +460,26 @@ public class AdherentControleur {
         dialog.setVisible(true);
     }
 
-    /** Boîte de dialogue pour saisir les cotisations par catégorie. */
+    /** Boîte de dialogue pour ajuster les cotisations par catégorie en mémoire. */
     private void saisirCotisations(List<Categorie> cats) {
         for (Categorie cat : cats) {
+            String valeurInitiale = String.format(Locale.FRANCE, "%.2f", cat.getCotisation());
             String saisie = JOptionPane.showInputDialog(fenetrePrincipale,
                     String.format("Cotisation pour « %s » (en €) :", cat.getLibelle()),
-                    "0.00");
+                    valeurInitiale);
             if (saisie == null) break; // annulation
             try {
-                double montant = Double.parseDouble(saisie.replace(",", "."));
-                cat.setCotisation(montant);
+                double montant = Double.parseDouble(saisie.trim().replace(",", "."));
+                if (montant < 0) {
+                    JOptionPane.showMessageDialog(fenetrePrincipale,
+                            "Un montant négatif n'est pas autorisé, le tarif précédent est conservé.",
+                            "Erreur", JOptionPane.WARNING_MESSAGE);
+                } else {
+                    cat.setCotisation(montant);
+                }
             } catch (NumberFormatException ex) {
                 JOptionPane.showMessageDialog(fenetrePrincipale,
-                        "Montant invalide, 0 sera utilisé pour cette catégorie.",
+                        "Montant invalide, le tarif précédent est conservé.",
                         "Erreur", JOptionPane.WARNING_MESSAGE);
             }
         }

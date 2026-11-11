@@ -8,6 +8,7 @@ import javax.swing.border.TitledBorder;
 import java.awt.*;
 import java.awt.event.ActionListener;
 import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 
 /**
  * Boîte de dialogue affichant la fiche détaillée (consultation) d'un adhérent.
@@ -17,7 +18,7 @@ public class FicheAdherentVue extends JDialog {
 
     // ── Composants ─────────────────────────────────────────────────────────────
     private JLabel lblNom, lblPrenom, lblNomNaissance, lblDateNaissance;
-    private JLabel lblAge, lblCategorie, lblMineur;
+    private JLabel lblAge, lblCategorie, lblCotisation, lblMineur;
     private JLabel lblAdresse, lblCodePostal, lblVille;
     private JLabel lblTelephone, lblEmail;
     private JLabel lblArme, lblPratique, lblLateralite;
@@ -58,17 +59,27 @@ public class FicheAdherentVue extends JDialog {
         String dateStr   = a.getDateNaissance() != null
                            ? a.getDateNaissance().format(FORMAT_DATE) : "—";
         lblDateNaissance = ajouterLigne(secIdentite, "Date de naissance :", dateStr,            3);
-        lblAge           = ajouterLigne(secIdentite, "Âge :",            a.getAge() + " ans",   4);
+        lblAge           = ajouterLigne(secIdentite, "Âge :",
+                           a.getDateNaissance() != null ? a.getAge() + " ans" : "—",            4);
         lblMineur        = ajouterLigne(secIdentite, "Statut :",
                            a.estMineur() ? "Mineur" : "Majeur",                                 5);
+        String codeCat   = (cat != null && cat.getCode() != null && !cat.getCode().isBlank())
+                           ? " (" + cat.getCode() + ")" : "";
         lblCategorie     = ajouterLigne(secIdentite, "Catégorie :",
-                           cat != null ? cat.getLibelle() + (cat.getCode().isBlank()
-                               ? "" : " (" + cat.getCode() + ")")
-                               : "Non déterminée",                                              6);
+                           cat != null ? cat.getLibelle() + codeCat : "Non déterminée",         6);
 
         // Mettre la catégorie en gras et en bleu
         lblCategorie.setFont(lblCategorie.getFont().deriveFont(Font.BOLD));
         lblCategorie.setForeground(new Color(0, 70, 140));
+
+        String cotisationStr = (cat != null)
+                ? String.format(Locale.FRANCE, "%.2f €", cat.getCotisation())
+                : "Non déterminée";
+        lblCotisation    = ajouterLigne(secIdentite, "Cotisation annuelle :", cotisationStr,    7);
+        lblCotisation.setFont(lblCotisation.getFont().deriveFont(Font.BOLD));
+        if (cat != null) {
+            lblCotisation.setForeground(new Color(0, 110, 0));
+        }
 
         // ── Section Coordonnées ────────────────────────────────────────────────
         JPanel secCoord = creerSection("Coordonnées");
@@ -163,7 +174,7 @@ public class FicheAdherentVue extends JDialog {
     private void configurerFenetre() {
         pack();
         setMinimumSize(new Dimension(480, 400));
-        setSize(520, 580);
+        setSize(520, 610);
         setLocationRelativeTo(getParent());
         setResizable(true);
     }
