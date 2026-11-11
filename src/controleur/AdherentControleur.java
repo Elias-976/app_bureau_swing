@@ -8,6 +8,7 @@ import modele.Categorie;
 import repository.CategorieRepository;
 import repository.ClubRepository;
 import modele.Club;
+import vue.AnnuaireClubsVue;
 import vue.FenetrePrincipale;
 import vue.FicheAdherentVue;
 import vue.FormulaireAdherentVue;
@@ -19,6 +20,9 @@ import javax.swing.event.AncestorListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.GridLayout;
 import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.time.LocalDate;
 import java.time.Period;
 import java.util.Arrays;
@@ -315,52 +319,39 @@ public class AdherentControleur {
             return;
         }
 
-        // Demande d'anonymisation
-        int choixAnon = JOptionPane.showConfirmDialog(fenetrePrincipale,
-                "Afficher les données anonymisées (RGPD) ?",
-                "Annuaire des clubs", JOptionPane.YES_NO_OPTION,
-                JOptionPane.QUESTION_MESSAGE);
-        if (choixAnon == JOptionPane.YES_OPTION) {
-            clubRepository.anonymiserDonnees(clubs);
+        // Anonymisation partielle par défaut des données personnelles des bénévoles (RGPD)
+        clubRepository.anonymiserDonnees(clubs);
+
+        AnnuaireClubsVue vue = new AnnuaireClubsVue(fenetrePrincipale, clubs);
+        vue.ajouterEcouteurImprimer(e -> vue.imprimerTableau());
+        vue.ajouterEcouteurExporterHtml(e -> exporterAnnuaireHtml(vue, clubs));
+        vue.setVisible(true);
+    }
+
+    /** Exporte l'annuaire anonymisé au format HTML imprimable. */
+    private void exporterAnnuaireHtml(AnnuaireClubsVue parent, List<Club> clubs) {
+        JFileChooser chooser = new JFileChooser();
+        chooser.setDialogTitle("Exporter l'annuaire des clubs en HTML");
+        chooser.setFileFilter(new FileNameExtensionFilter("Pages HTML (*.html)", "html"));
+        chooser.setSelectedFile(new File("annuaire_clubs.html"));
+
+        if (chooser.showSaveDialog(parent) == JFileChooser.APPROVE_OPTION) {
+            File fichier = chooser.getSelectedFile();
+            if (!fichier.getName().toLowerCase(Locale.ROOT).endsWith(".html")) {
+                fichier = new File(fichier.getAbsolutePath() + ".html");
+            }
+            try {
+                String html = AnnuaireClubsVue.genererHtmlImprimable(clubs);
+                Files.writeString(fichier.toPath(), html, StandardCharsets.UTF_8);
+                JOptionPane.showMessageDialog(parent,
+                        "Annuaire exporté en HTML vers :\n" + fichier.getAbsolutePath(),
+                        "Export HTML réussi", JOptionPane.INFORMATION_MESSAGE);
+            } catch (IOException ex) {
+                JOptionPane.showMessageDialog(parent,
+                        "Erreur lors de l'exportation HTML :\n" + ex.getMessage(),
+                        "Erreur d'exportation", JOptionPane.ERROR_MESSAGE);
+            }
         }
-
-        // Construction du tableau
-        String[] colonnes = {"Nom", "Ville", "Adresse", "Contact", "Téléphone", "Email"};
-        Object[][] donnees = new Object[clubs.size()][6];
-        for (int i = 0; i < clubs.size(); i++) {
-            Club c = clubs.get(i);
-            donnees[i][0] = c.getNom();
-            donnees[i][1] = c.getVille();
-            donnees[i][2] = c.getAdresse();
-            donnees[i][3] = c.getBenevoleNom();
-            donnees[i][4] = c.getBenevoleTelephone();
-            donnees[i][5] = c.getBenevoleEmail();
-        }
-
-        JTable table = new JTable(donnees, colonnes) {
-            @Override public boolean isCellEditable(int r, int c) { return false; }
-        };
-        table.setAutoCreateRowSorter(true);
-        table.setRowHeight(22);
-        table.getTableHeader().setReorderingAllowed(false);
-
-        JScrollPane scroll = new JScrollPane(table);
-        scroll.setPreferredSize(new java.awt.Dimension(900, 350));
-
-        JDialog dialog = new JDialog(fenetrePrincipale, "Annuaire des clubs d'escrime", true);
-        dialog.setLayout(new java.awt.BorderLayout(8, 8));
-        dialog.add(new JLabel("  " + clubs.size() + " club(s) chargé(s)"), java.awt.BorderLayout.NORTH);
-        dialog.add(scroll, java.awt.BorderLayout.CENTER);
-
-        JButton btnFermer = new JButton("✖ Fermer");
-        btnFermer.addActionListener(e -> dialog.dispose());
-        JPanel sud = new JPanel();
-        sud.add(btnFermer);
-        dialog.add(sud, java.awt.BorderLayout.SOUTH);
-
-        dialog.pack();
-        dialog.setLocationRelativeTo(fenetrePrincipale);
-        dialog.setVisible(true);
     }
 
     // ── Action : Récapitulatif financier ──────────────────────────────────────

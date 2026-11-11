@@ -12,18 +12,27 @@ public class Club {
     private String benevoleNom;
     private String benevoleTelephone;
     private String benevoleEmail;
+    private String site;
 
     // ── Constructeurs ──────────────────────────────────────────────────────────
 
-    /** Constructeur complet */
+    /** Constructeur complet incluant le site web du club */
     public Club(String nom, String ville, String adresse,
-                String benevoleNom, String benevoleTelephone, String benevoleEmail) {
+                String benevoleNom, String benevoleTelephone,
+                String benevoleEmail, String site) {
         this.nom               = nom;
         this.ville             = ville;
         this.adresse           = adresse;
         this.benevoleNom       = benevoleNom;
         this.benevoleTelephone = benevoleTelephone;
         this.benevoleEmail     = benevoleEmail;
+        this.site              = site;
+    }
+
+    /** Constructeur complet (compatibilité sans site web) */
+    public Club(String nom, String ville, String adresse,
+                String benevoleNom, String benevoleTelephone, String benevoleEmail) {
+        this(nom, ville, adresse, benevoleNom, benevoleTelephone, benevoleEmail, "");
     }
 
     // ── Méthodes métier ────────────────────────────────────────────────────────
@@ -31,12 +40,13 @@ public class Club {
     /**
      * Retourne les coordonnées du club sous forme lisible.
      *
-     * @return chaîne de caractères formatée avec nom, adresse et contact
+     * @return chaîne de caractères formatée avec nom, adresse, site et contact
      */
     public String afficherCoordonnees() {
+        String siteAffiche = (site == null || site.isBlank()) ? "—" : site;
         return String.format(
-                "Club : %s%nAdresse : %s%nContact bénévole : %s%nTéléphone : %s%nEmail : %s",
-                nom, adresse, benevoleNom, benevoleTelephone, benevoleEmail);
+                "Club : %s%nAdresse : %s%nSite web : %s%nContact bénévole : %s%nTéléphone : %s%nEmail : %s",
+                nom, adresse, siteAffiche, benevoleNom, benevoleTelephone, benevoleEmail);
     }
 
     @Override
@@ -64,5 +74,8 @@ public class Club {
 
     public String getBenevoleEmail()                  { return benevoleEmail; }
     public void setBenevoleEmail(String email)        { this.benevoleEmail = email; }
+
+    public String getSite()                           { return site; }
+    public void setSite(String site)                  { this.site = site; }
 }
 
