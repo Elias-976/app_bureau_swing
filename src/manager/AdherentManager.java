@@ -3,8 +3,9 @@ package manager;
 import modele.Adherent;
 import modele.Categorie;
 
-import java.util.List;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Gestionnaire principal des adhérents du Cercle d'Escrime de Vandœuvre.
@@ -13,27 +14,47 @@ import java.util.ArrayList;
 public class AdherentManager {
 
     // ── Attributs ──────────────────────────────────────────────────────────────
-    private List<Adherent> listeAdherents;
+    private List<Adherent>        listeAdherents;
+    /** Compteur auto-incrémenté pour générer les identifiants uniques. */
+    private final AtomicInteger   compteurId;
 
     // ── Constructeur ───────────────────────────────────────────────────────────
 
     public AdherentManager() {
         this.listeAdherents = new ArrayList<>();
+        this.compteurId     = new AtomicInteger(1);
     }
 
     // ── Méthodes CRUD ──────────────────────────────────────────────────────────
 
     /**
      * Ajoute un nouvel adhérent dans la liste.
+     * Un identifiant unique lui est automatiquement attribué.
      *
-     * @param adherent l'adhérent à ajouter
+     * @param adherent l'adhérent à ajouter (son id sera écrasé par le compteur)
+     * @throws IllegalArgumentException si l'adhérent est null, ou si nom/prénom sont vides
      */
     public void ajouterAdherent(Adherent adherent) {
-        // TODO : implémenter dans US1
+        if (adherent == null) {
+            throw new IllegalArgumentException("L'adhérent ne peut pas être null.");
+        }
+        if (adherent.getNom() == null || adherent.getNom().isBlank()) {
+            throw new IllegalArgumentException("Le nom de l'adhérent est obligatoire.");
+        }
+        if (adherent.getPrenom() == null || adherent.getPrenom().isBlank()) {
+            throw new IllegalArgumentException("Le prénom de l'adhérent est obligatoire.");
+        }
+        if (adherent.getDateNaissance() == null) {
+            throw new IllegalArgumentException("La date de naissance est obligatoire.");
+        }
+
+        // Attribution d'un identifiant unique
+        adherent.setId(compteurId.getAndIncrement());
+        listeAdherents.add(adherent);
     }
 
     /**
-     * Modifie les informations d'un adhérent existant.
+     * Modifie les informations d'un adhérent existant identifié par son id.
      *
      * @param adherentModifie l'adhérent avec les nouvelles valeurs (l'id doit correspondre)
      */
@@ -53,7 +74,7 @@ public class AdherentManager {
     /**
      * Recherche des adhérents selon un critère (nom, prénom ou email).
      *
-     * @param critere la chaîne de recherche
+     * @param critere la chaîne de recherche (insensible à la casse)
      * @return la liste des adhérents correspondants
      */
     public List<Adherent> rechercherAdherent(String critere) {
@@ -83,10 +104,22 @@ public class AdherentManager {
         return "";
     }
 
-    // ── Getter ─────────────────────────────────────────────────────────────────
+    // ── Getters ────────────────────────────────────────────────────────────────
 
     public List<Adherent> getListeAdherents() {
         return listeAdherents;
+    }
+
+    /**
+     * Remplace la liste complète des adhérents (utilisé lors d'une restauration).
+     *
+     * @param liste la nouvelle liste d'adhérents
+     */
+    public void setListeAdherents(List<Adherent> liste) {
+        this.listeAdherents = liste;
+        // Recalibrer le compteur après le dernier id chargé
+        int maxId = liste.stream().mapToInt(Adherent::getId).max().orElse(0);
+        compteurId.set(maxId + 1);
     }
 }
 
