@@ -14,10 +14,14 @@ import vue.FormulaireAdherentVue;
 import vue.RechercheAdherentVue;
 
 import javax.swing.*;
+import javax.swing.event.AncestorEvent;
+import javax.swing.event.AncestorListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
+import java.awt.GridLayout;
 import java.io.File;
 import java.time.LocalDate;
 import java.time.Period;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 
@@ -459,15 +463,37 @@ public class AdherentControleur {
 
         if (chooser.showSaveDialog(fenetrePrincipale) == JFileChooser.APPROVE_OPTION) {
             File fichier = chooser.getSelectedFile();
-            if (!fichier.getName().endsWith(".gea"))
+            if (!fichier.getName().toLowerCase(Locale.ROOT).endsWith(".gea")) {
                 fichier = new File(fichier.getAbsolutePath() + ".gea");
+            }
 
-            sauvegardeManager.exporterDonnees(fichier.getAbsolutePath(),
-                    manager.getListeAdherents());
+            char[] motDePasse = demanderMotDePasse(true, "Chiffrement de la sauvegarde");
+            if (motDePasse == null) {
+                return;
+            }
 
-            JOptionPane.showMessageDialog(fenetrePrincipale,
-                    "Données exportées avec succès vers :\n" + fichier.getAbsolutePath(),
-                    "Exportation réussie", JOptionPane.INFORMATION_MESSAGE);
+            boolean succes;
+            try {
+                succes = sauvegardeManager.exporterDonnees(
+                        fichier.getAbsolutePath(),
+                        manager.getListeAdherents(),
+                        motDePasse);
+            } finally {
+                Arrays.fill(motDePasse, '\0');
+            }
+
+            if (succes) {
+                JOptionPane.showMessageDialog(fenetrePrincipale,
+                        "Données exportées et chiffrées avec succès vers :\n"
+                                + fichier.getAbsolutePath(),
+                        "Exportation réussie", JOptionPane.INFORMATION_MESSAGE);
+            } else {
+                String details = sauvegardeManager.getDernierMessageErreur();
+                JOptionPane.showMessageDialog(fenetrePrincipale,
+                        "Erreur lors de l'exportation des données :\n"
+                                + (details != null ? details : "Erreur inconnue."),
+                        "Erreur de sauvegarde", JOptionPane.ERROR_MESSAGE);
+            }
         }
     }
 
@@ -483,21 +509,120 @@ public class AdherentControleur {
 
             if (!manager.getListeAdherents().isEmpty()) {
                 int choix = JOptionPane.showConfirmDialog(fenetrePrincipale,
-                        "Cette importation remplacera les " +
-                        manager.getListeAdherents().size() +
-                        " adhérent(s) actuellement en mémoire.\nContinuer ?",
+                        "Cette importation remplacera les "
+                                + manager.getListeAdherents().size()
+                                + " adhérent(s) actuellement en mémoire.\nContinuer ?",
                         "Confirmer l'importation",
                         JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
                 if (choix != JOptionPane.YES_OPTION) return;
             }
 
-            List<Adherent> importes = sauvegardeManager.importerDonnees(fichier.getAbsolutePath());
-            if (!importes.isEmpty()) {
-                manager.setListeAdherents(importes);
-                JOptionPane.showMessageDialog(fenetrePrincipale,
-                        importes.size() + " adhérent(s) importé(s) avec succès.",
-                        "Importation réussie", JOptionPane.INFORMATION_MESSAGE);
+            char[] motDePasse = demanderMotDePasse(false, "Déchiffrement de la sauvegarde");
+            if (motDePasse == null) {
+                return;
             }
+
+            List<Adherent> importes;
+            try {
+                importes = sauvegardeManager.importerDonnees(
+                        fichier.getAbsolutePath(), motDePasse);
+            } finally {
+                Arrays.fill(motDePasse, '\0');
+            }
+
+            if (importes == null) {
+                String details = sauvegardeManager.getDernierMessageErreur();
+                JOptionPane.showMessageDialog(fenetrePrincipale,
+                        "Erreur lors de l'importation des données :\n"
+                                + (details != null ? details : "Erreur inconnue."),
+                        "Erreur d'importation", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            manager.setListeAdherents(importes);
+            JOptionPane.showMessageDialog(fenetrePrincipale,
+                    importes.size() + " adhérent(s) importé(s) avec succès.",
+                    "Importation réussie", JOptionPane.INFORMATION_MESSAGE);
+        }
+    }
+
+    /**
+     * Affiche une boîte de dialogue demandant un mot de passe pour chiffrer
+     * ou déchiffrer la sauvegarde.
+     *
+     * @param avecConfirmation {@code true} pour exiger une saisie en double (export)
+     * @param titre            titre de la fenêtre de dialogue
+     * @return le mot de passe saisi, ou {@code null} si l'utilisateur a annulé
+     */
+    private char[] demanderMotDePasse(boolean avecConfirmation, String titre) {
+        while (true) {
+            JPasswordField champMdp = new JPasswordField(20);
+            champMdp.addAncestorListener(new AncestorListener() {
+                @Override
+                public void ancestorAdded(AncestorEvent event) {
+                    SwingUtilities.invokeLater(champMdp::requestFocusInWindow);
+                }
+                @Override public void ancestorRemoved(AncestorEvent event) {}
+                @Override public void ancestorMoved(AncestorEvent event) {}
+            });
+
+            JPanel panneau = new JPanel(new GridLayout(0, 1, 4, 4));
+            panneau.add(new JLabel(avecConfirmation
+                    ? "Mot de passe de chiffrement :"
+                    : "Mot de passe de la sauvegarde :"));
+            panneau.add(champMdp);
+
+            JPasswordField champConfirm = null;
+            if (avecConfirmation) {
+                champConfirm = new JPasswordField(20);
+                panneau.add(new JLabel("Confirmer le mot de passe :"));
+                panneau.add(champConfirm);
+            }
+
+            int resultat = JOptionPane.showConfirmDialog(
+                    fenetrePrincipale,
+                    panneau,
+                    titre,
+                    JOptionPane.OK_CANCEL_OPTION,
+                    JOptionPane.QUESTION_MESSAGE);
+
+            if (resultat != JOptionPane.OK_OPTION) {
+                champMdp.setText("");
+                if (champConfirm != null) {
+                    champConfirm.setText("");
+                }
+                return null;
+            }
+
+            char[] mdp1 = champMdp.getPassword();
+            char[] mdp2 = (champConfirm != null) ? champConfirm.getPassword() : null;
+            champMdp.setText("");
+            if (champConfirm != null) {
+                champConfirm.setText("");
+            }
+
+            if (mdp1.length == 0) {
+                Arrays.fill(mdp1, '\0');
+                if (mdp2 != null) Arrays.fill(mdp2, '\0');
+                JOptionPane.showMessageDialog(fenetrePrincipale,
+                        "Le mot de passe ne peut pas être vide.",
+                        titre, JOptionPane.WARNING_MESSAGE);
+                continue;
+            }
+
+            if (avecConfirmation && !Arrays.equals(mdp1, mdp2)) {
+                Arrays.fill(mdp1, '\0');
+                Arrays.fill(mdp2, '\0');
+                JOptionPane.showMessageDialog(fenetrePrincipale,
+                        "Les deux mots de passe ne correspondent pas.",
+                        titre, JOptionPane.WARNING_MESSAGE);
+                continue;
+            }
+
+            if (mdp2 != null) {
+                Arrays.fill(mdp2, '\0');
+            }
+            return mdp1;
         }
     }
 
