@@ -1,0 +1,1984 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Application GEA — Présentation Soutenance (LorInfo Solutions)</title>
+<style>
+  @page {
+    size: 13.333333in 7.5in;
+    margin: 0;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  html, body {
+    width: 100%;
+    height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
+    color: #0F172A;
+    background: #060A14;
+    font-feature-settings: "kern" 1, "liga" 1;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  code, .mono {
+    font-family: "SF Mono", Menlo, Monaco, "Courier New", monospace;
+    font-size: 0.88em;
+    background: #F1F5F9;
+    color: #1E293B;
+    padding: 1px 5px;
+    border-radius: 4px;
+    border: 1px solid #E2E8F0;
+    white-space: nowrap;
+  }
+
+  /* ── VIEWPORT & MISE À L'ÉCHELLE 16:9 ── */
+  #viewport {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #060A14;
+    position: relative;
+    overflow: hidden;
+  }
+
+  #stage {
+    width: 1280px;
+    height: 720px;
+    position: relative;
+    flex-shrink: 0;
+    transform-origin: center center;
+    box-shadow: 0 28px 90px rgba(0, 0, 0, 0.55);
+    border-radius: 4px;
+    overflow: hidden;
+    background: #F8FAFC;
+  }
+
+  .slide {
+    width: 1280px;
+    height: 720px;
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    background: #F8FAFC;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(6px);
+    transition: opacity 220ms cubic-bezier(0.22, 1, 0.36, 1),
+                transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+    z-index: 1;
+  }
+
+  .slide.active {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+    z-index: 2;
+  }
+
+  /* ── HUD DE CONTRÔLE AUTO-MASQUANT ── */
+  #hud {
+    position: fixed;
+    bottom: 18px;
+    left: 50%;
+    transform: translateX(-50%) translateY(0);
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.86);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+    color: #F8FAFC;
+    font-size: 12.5px;
+    transition: opacity 260ms ease, transform 260ms ease;
+  }
+
+  body.hud-hidden #hud {
+    opacity: 0;
+    transform: translateX(-50%) translateY(10px);
+    pointer-events: none;
+  }
+
+  body.hud-hidden {
+    cursor: none;
+  }
+
+  .hud-btn {
+    appearance: none;
+    background: transparent;
+    border: 1px solid transparent;
+    color: #E2E8F0;
+    font: inherit;
+    font-weight: 550;
+    padding: 5px 10px;
+    border-radius: 999px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: background 140ms ease, color 140ms ease, border-color 140ms ease;
+  }
+
+  .hud-btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.12);
+    color: #FFFFFF;
+  }
+
+  .hud-btn:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+
+  .hud-btn.active {
+    background: rgba(59, 130, 246, 0.28);
+    border-color: rgba(147, 197, 253, 0.45);
+    color: #FFFFFF;
+  }
+
+  .hud-sep {
+    width: 1px;
+    height: 16px;
+    background: rgba(255, 255, 255, 0.16);
+    margin: 0 2px;
+  }
+
+  .hud-counter {
+    font-variant-numeric: tabular-nums;
+    font-weight: 650;
+    color: #93C5FD;
+    padding: 0 8px;
+    min-width: 58px;
+    text-align: center;
+  }
+
+  .hud-kbd {
+    font-size: 10.5px;
+    opacity: 0.65;
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    border-radius: 4px;
+    padding: 0 4px;
+    line-height: 1.4;
+  }
+
+  /* ── BARRE DE PROGRESSION DISCRÈTE ── */
+  #progress-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #3B82F6, #10B981);
+    z-index: 40;
+    transition: width 240ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  /* ── VUE GRILLE (TOUCHE G) ── */
+  #overview {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    background: rgba(6, 10, 20, 0.94);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    padding: 36px 48px 48px;
+    display: none;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  #overview.open {
+    display: flex;
+  }
+
+  .overview-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+    color: #F8FAFC;
+  }
+
+  .overview-header h2 {
+    font-size: 20px;
+    font-weight: 700;
+  }
+
+  .overview-header span {
+    font-size: 13px;
+    color: #94A3B8;
+  }
+
+  .overview-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 22px;
+    margin: auto 0;
+  }
+
+  .thumb-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    padding: 10px;
+    cursor: pointer;
+    transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+    text-align: left;
+  }
+
+  .thumb-card:hover {
+    transform: translateY(-3px);
+    border-color: #60A5FA;
+    background: rgba(59, 130, 246, 0.12);
+  }
+
+  .thumb-card.current {
+    border-color: #34D399;
+    background: rgba(16, 185, 129, 0.12);
+  }
+
+  .thumb-frame {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border-radius: 7px;
+    overflow: hidden;
+    position: relative;
+    background: #F8FAFC;
+    margin-bottom: 9px;
+  }
+
+  .thumb-inner {
+    width: 1280px;
+    height: 720px;
+    transform-origin: top left;
+    pointer-events: none;
+  }
+
+  .thumb-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    color: #E2E8F0;
+    font-size: 12.5px;
+    font-weight: 600;
+  }
+
+  .thumb-num {
+    color: #93C5FD;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── ÉCRAN NOIR POUR COUPURE DÉMO (TOUCHE B) ── */
+  #blackout {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    background: #000000;
+    display: none;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 24px;
+    color: rgba(255, 255, 255, 0.25);
+    font-size: 12px;
+  }
+
+  #blackout.open {
+    display: flex;
+  }
+
+  /* ── SLIDE 1 : COUVERTURE HERO ── */
+  .slide-cover {
+    background: radial-gradient(circle at 85% 20%, #1E3A8A 0%, #0F172A 55%, #090E1A 100%);
+    color: #F8FAFC;
+    padding: 54px 72px 44px 72px;
+    justify-content: space-between;
+  }
+
+  .cover-bg-svg {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.14;
+  }
+
+  .cover-top {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .eyebrow-dark {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #93C5FD;
+    background: rgba(37, 99, 235, 0.18);
+    border: 1px solid rgba(147, 197, 253, 0.28);
+    padding: 6px 14px;
+    border-radius: 999px;
+  }
+
+  .season-tag {
+    font-size: 13px;
+    font-weight: 500;
+    color: #94A3B8;
+    letter-spacing: 0.04em;
+  }
+
+  .cover-center {
+    position: relative;
+    z-index: 2;
+    max-width: 960px;
+    margin: auto 0;
+  }
+
+  .cover-accent-bar {
+    width: 56px;
+    height: 4px;
+    background: linear-gradient(90deg, #3B82F6, #10B981);
+    border-radius: 2px;
+    margin-bottom: 24px;
+  }
+
+  .cover-title {
+    font-size: 62px;
+    font-weight: 750;
+    letter-spacing: -0.02em;
+    line-height: 1.06;
+    color: #FFFFFF;
+    margin-bottom: 16px;
+  }
+
+  .cover-subtitle {
+    font-size: 25px;
+    font-weight: 400;
+    color: #CBD5E1;
+    line-height: 1.35;
+    margin-bottom: 34px;
+  }
+
+  .cover-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .cover-pill {
+    font-size: 13.5px;
+    font-weight: 500;
+    color: #E2E8F0;
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    padding: 8px 16px;
+    border-radius: 8px;
+  }
+
+  .cover-pill strong {
+    color: #FFFFFF;
+    font-weight: 600;
+  }
+
+  .cover-footer {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    font-size: 13.5px;
+    color: #94A3B8;
+  }
+
+  .cover-authors {
+    color: #E2E8F0;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+  }
+
+  /* ── LAYOUT STANDARD DES SLIDES DE CONTENU ── */
+  .slide-content {
+    padding: 36px 56px 26px 56px;
+  }
+
+  .slide-header {
+    margin-bottom: 20px;
+  }
+
+  .eyebrow-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+  }
+
+  .eyebrow {
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #2563EB;
+  }
+
+  .eyebrow-emerald { color: #059669; }
+  .eyebrow-violet  { color: #6D28D9; }
+
+  .slide-title {
+    font-size: 29px;
+    font-weight: 750;
+    letter-spacing: -0.02em;
+    color: #0F172A;
+    line-height: 1.15;
+    margin-bottom: 4px;
+  }
+
+  .slide-subtitle {
+    font-size: 14.5px;
+    font-weight: 450;
+    color: #475569;
+    line-height: 1.35;
+  }
+
+  .slide-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 0;
+  }
+
+  .slide-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 12px;
+    margin-top: 14px;
+    border-top: 1px solid #E2E8F0;
+    font-size: 11.5px;
+    color: #64748B;
+  }
+
+  .page-num {
+    font-weight: 600;
+    color: #475569;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── COMPOSANTS RÉUTILISABLES ── */
+  .card {
+    background: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
+  }
+
+  .card-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #0F172A;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .badge {
+    font-size: 11px;
+    font-weight: 650;
+    padding: 3px 9px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+
+  .badge-blue    { background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE; }
+  .badge-emerald { background: #ECFDF5; color: #047857; border: 1px solid #A7F3D0; }
+  .badge-violet  { background: #F5F3FF; color: #5B21B6; border: 1px solid #DDD6FE; }
+  .badge-amber   { background: #FFFBEB; color: #B45309; border: 1px solid #FDE68A; }
+  .badge-slate   { background: #F1F5F9; color: #475569; border: 1px solid #CBD5E1; }
+
+  .clean-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .clean-list li {
+    font-size: 13.5px;
+    line-height: 1.45;
+    color: #334155;
+    padding-left: 16px;
+    position: relative;
+  }
+
+  .clean-list li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 7px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #2563EB;
+  }
+
+  .clean-list.emerald li::before { background: #059669; }
+  .clean-list.violet li::before  { background: #6D28D9; }
+  .clean-list.amber li::before   { background: #D97706; }
+
+  .clean-list li strong {
+    color: #0F172A;
+    font-weight: 650;
+  }
+
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+
+  .grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
+  }
+
+  .stack {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* ── SLIDE 2 : SOMMAIRE ── */
+  .sommaire-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px 24px;
+    margin: auto 0;
+  }
+
+  .sommaire-card {
+    background: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    border-radius: 14px;
+    padding: 22px 24px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
+    cursor: pointer;
+    transition: border-color 150ms ease, transform 150ms ease, box-shadow 150ms ease;
+  }
+
+  .sommaire-card:hover {
+    border-color: #93C5FD;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.08);
+  }
+
+  .sommaire-num {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: #EFF6FF;
+    color: #1D4ED8;
+    border: 1px solid #BFDBFE;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 750;
+    flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .sommaire-num.emerald { background: #ECFDF5; color: #047857; border-color: #A7F3D0; }
+  .sommaire-num.violet  { background: #F5F3FF; color: #5B21B6; border-color: #DDD6FE; }
+
+  .sommaire-text h3 {
+    font-size: 17px;
+    font-weight: 700;
+    color: #0F172A;
+    margin-bottom: 4px;
+  }
+
+  .sommaire-text p {
+    font-size: 13.5px;
+    color: #475569;
+    line-height: 1.35;
+  }
+
+  /* ── TABLEAUX ÉPURÉS ── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  th {
+    background: #0F172A;
+    color: #F8FAFC;
+    font-weight: 600;
+    text-align: left;
+    padding: 8px 12px;
+    font-size: 12px;
+    letter-spacing: 0.02em;
+  }
+
+  th code {
+    background: rgba(255, 255, 255, 0.14);
+    color: #F8FAFC;
+    border-color: rgba(255, 255, 255, 0.24);
+  }
+
+  th:first-child { border-top-left-radius: 8px; }
+  th:last-child  { border-top-right-radius: 8px; }
+
+  td {
+    padding: 8px 12px;
+    border-bottom: 1px solid #E2E8F0;
+    color: #334155;
+    vertical-align: middle;
+  }
+
+  tr:last-child td {
+    border-bottom: none;
+  }
+
+  .num-cell {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-weight: 650;
+    color: #0F172A;
+  }
+
+  /* ── SLIDE 3 : HORS PÉRIMÈTRE ── */
+  .scope-card {
+    background: #FFF8F8;
+    border: 1px solid #FECACA;
+  }
+
+  .scope-card .card-title {
+    color: #991B1B;
+  }
+
+  .scope-pills {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .scope-pill {
+    font-size: 12.5px;
+    font-weight: 550;
+    color: #7F1D1D;
+    background: #FFFFFF;
+    border: 1px solid #FCA5A5;
+    padding: 8px 11px;
+    border-radius: 8px;
+  }
+
+  .tuleap-kpis {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .kpi-chip {
+    flex: 1;
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 8px;
+    padding: 8px 12px;
+    text-align: center;
+  }
+
+  .kpi-chip strong {
+    display: block;
+    font-size: 16px;
+    font-weight: 750;
+    color: #0F172A;
+  }
+
+  .kpi-chip span {
+    font-size: 11.5px;
+    color: #64748B;
+  }
+
+  .info-strip {
+    margin-top: 14px;
+    background: #EFF6FF;
+    border: 1px solid #BFDBFE;
+    color: #1E3A8A;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 12.5px;
+    line-height: 1.4;
+  }
+
+  /* ── SLIDE 4 : SCHÉMA MVC ── */
+  .mvc-diagram {
+    background: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    border-radius: 14px;
+    padding: 20px 22px;
+    margin-bottom: 18px;
+    display: flex;
+    align-items: stretch;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .mvc-col {
+    flex: 1;
+    border-radius: 10px;
+    padding: 14px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .mvc-vue  { background: #EFF6FF; border: 1.5px solid #93C5FD; }
+  .mvc-ctrl { background: #ECFDF5; border: 1.5px solid #6EE7B7; }
+  .mvc-mid  { display: flex; flex-direction: column; gap: 10px; flex: 1.15; }
+  .mvc-mgr  { background: #F0F9FF; border: 1.5px solid #7DD3FC; border-radius: 10px; padding: 11px 14px; flex: 1; }
+  .mvc-repo { background: #FFFBEB; border: 1.5px solid #FCD34D; border-radius: 10px; padding: 11px 14px; flex: 1; }
+  .mvc-right{ display: flex; flex-direction: column; gap: 10px; flex: 1.18; }
+  .mvc-mod  { background: #F5F3FF; border: 1.5px solid #C4B5FD; border-radius: 10px; padding: 11px 14px; flex: 1.25; }
+  .mvc-src  { background: #F8FAFC; border: 1.5px dashed #94A3B8; border-radius: 10px; padding: 9px 14px; flex: 0.65; }
+
+  .mvc-head {
+    font-size: 11px;
+    font-weight: 750;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #0F172A;
+    margin-bottom: 4px;
+  }
+
+  .mvc-items {
+    font-size: 12px;
+    line-height: 1.48;
+    color: #334155;
+  }
+
+  .mvc-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    flex-shrink: 0;
+    color: #64748B;
+  }
+
+  /* ── SLIDE 5 : TARIFS & CALLOUT ── */
+  .callout-amber {
+    background: #FFFBEB;
+    border: 1px solid #FDE68A;
+    border-left: 4px solid #D97706;
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+
+  .callout-amber h4 {
+    font-size: 14px;
+    font-weight: 700;
+    color: #92400E;
+    margin-bottom: 6px;
+  }
+
+  .callout-amber p {
+    font-size: 12.8px;
+    line-height: 1.45;
+    color: #78350F;
+  }
+
+  .tarifs-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .tarifs-grid table td,
+  .tarifs-grid table th {
+    padding: 6px 7px;
+    font-size: 11.8px;
+    white-space: nowrap;
+  }
+
+  /* ── SLIDE 7 : SCHÉMA BINAIRE GEA1 ── */
+  .callout-violet {
+    background: #F5F3FF;
+    border: 1px solid #DDD6FE;
+    border-left: 4px solid #6D28D9;
+    border-radius: 10px;
+    padding: 12px 18px;
+    margin-bottom: 16px;
+    font-size: 13.5px;
+    color: #3B0764;
+    line-height: 1.4;
+  }
+
+  .gea-frame-card {
+    background: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 16px;
+  }
+
+  .gea-grid {
+    display: grid;
+    grid-template-columns: 1.48fr 1fr;
+    column-gap: 10px;
+    row-gap: 8px;
+    margin-top: 10px;
+  }
+
+  .gea-header-blocks {
+    display: grid;
+    grid-template-columns: 1fr 0.85fr 1.15fr 1.05fr;
+    gap: 8px;
+  }
+
+  .gea-block {
+    border-radius: 8px;
+    padding: 11px 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .gea-b1 { background: #EFF6FF; border: 1.5px solid #93C5FD; color: #1E3A8A; }
+  .gea-b2 { background: #ECFDF5; border: 1.5px solid #6EE7B7; color: #065F46; }
+  .gea-b3 { background: #F0F9FF; border: 1.5px solid #7DD3FC; color: #0C4A6E; }
+  .gea-b4 { background: #FFFBEB; border: 1.5px solid #FCD34D; color: #78350F; }
+  .gea-b5 { background: #0F172A; border: 1.5px solid #1E293B; color: #F8FAFC; padding: 11px 14px; }
+
+  .gea-block strong {
+    font-size: 12.2px;
+    font-weight: 700;
+    display: block;
+    margin-bottom: 3px;
+  }
+
+  .gea-block span {
+    font-size: 11.3px;
+    opacity: 0.9;
+  }
+
+  .aad-wrap {
+    grid-column: 1 / 2;
+  }
+
+  .aad-bar {
+    width: 100%;
+    border-bottom: 2px solid #6D28D9;
+    border-left: 2px solid #6D28D9;
+    border-right: 2px solid #6D28D9;
+    height: 8px;
+    border-radius: 0 0 4px 4px;
+  }
+
+  .aad-label {
+    font-size: 11.8px;
+    font-weight: 600;
+    color: #5B21B6;
+    margin-top: 5px;
+    grid-column: 1 / 3;
+  }
+
+  /* ── SLIDE 8 : TESTS & BILAN ── */
+  .kpi-hero {
+    background: #ECFDF5;
+    border: 1.5px solid #6EE7B7;
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .kpi-hero-main {
+    font-size: 19px;
+    font-weight: 750;
+    color: #065F46;
+  }
+
+  .kpi-hero-sub {
+    font-size: 12px;
+    color: #047857;
+    margin-top: 2px;
+  }
+
+  .closing-banner {
+    background: linear-gradient(135deg, #0F172A, #1E3A8A);
+    color: #FFFFFF;
+    border-radius: 10px;
+    padding: 14px 18px;
+    text-align: center;
+    font-size: 13.5px;
+    font-weight: 650;
+    letter-spacing: 0.01em;
+  }
+
+  .livrables-strip {
+    margin-top: 12px;
+    background: #F1F5F9;
+    border: 1px solid #CBD5E1;
+    border-radius: 8px;
+    padding: 9px 13px;
+    font-size: 12px;
+    color: #334155;
+    line-height: 1.45;
+  }
+
+  /* ── IMPRESSION / EXPORT PDF NATIF NAVIGATEUR ── */
+  @media print {
+    html, body {
+      width: 1280px;
+      height: auto;
+      overflow: visible;
+      background: #F8FAFC;
+    }
+
+    #hud, #progress-bar, #overview, #blackout {
+      display: none !important;
+    }
+
+    #viewport {
+      display: block;
+      width: 1280px;
+      height: auto;
+      background: transparent;
+      overflow: visible;
+    }
+
+    #stage {
+      width: 1280px;
+      height: auto;
+      transform: none !important;
+      box-shadow: none;
+      border-radius: 0;
+    }
+
+    .slide {
+      position: relative !important;
+      inset: auto !important;
+      opacity: 1 !important;
+      pointer-events: auto !important;
+      transform: none !important;
+      transition: none !important;
+    }
+
+    .slide:not(:last-child) {
+      page-break-after: always;
+      break-after: page;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div id="progress-bar" style="width: 12.5%;"></div>
+
+<main id="viewport">
+  <div id="stage">
+
+    <!-- ════════════════════════════════════════════════════════════════════════
+         SLIDE 1 : COUVERTURE
+         ════════════════════════════════════════════════════════════════════════ -->
+    <section class="slide slide-cover active" data-title="Couverture">
+      <svg class="cover-bg-svg" viewBox="0 0 1280 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <line x1="860" y1="-40" x2="1320" y2="520" stroke="#60A5FA" stroke-width="1.5"/>
+        <line x1="940" y1="-40" x2="1340" y2="440" stroke="#93C5FD" stroke-width="1"/>
+        <line x1="760" y1="760" x2="1280" y2="180" stroke="#34D399" stroke-width="1.2"/>
+        <circle cx="1090" cy="240" r="190" stroke="#3B82F6" stroke-width="1"/>
+        <circle cx="1090" cy="240" r="120" stroke="#60A5FA" stroke-width="0.8" stroke-dasharray="6 6"/>
+      </svg>
+
+      <div class="cover-top">
+        <span class="eyebrow-dark">BTS SIO • Option SLAM • Ateliers de professionnalisation</span>
+        <span class="season-tag">Saison 2026–2027</span>
+      </div>
+
+      <div class="cover-center">
+        <div class="cover-accent-bar"></div>
+        <h1 class="cover-title">Application GEA</h1>
+        <p class="cover-subtitle">Gestion des Entraînements et des Adhérents</p>
+        <div class="cover-pills">
+          <div class="cover-pill"><strong>Commanditaire :</strong> Cercle d'Escrime de Vandœuvre</div>
+          <div class="cover-pill"><strong>Contexte :</strong> Maison des Ligues de Lorraine (M2L)</div>
+          <div class="cover-pill"><strong>ESN :</strong> LorInfo Solutions</div>
+        </div>
+      </div>
+
+      <div class="cover-footer">
+        <span class="cover-authors">Abdallah Elias &nbsp;·&nbsp; Delhem Wassim &nbsp;·&nbsp; El Asmar Youness</span>
+        <span>Dépôt TP-GEA &nbsp;·&nbsp; Java 21 &amp; Swing</span>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════════════════════════════
+         SLIDE 2 : SOMMAIRE
+         ════════════════════════════════════════════════════════════════════════ -->
+    <section class="slide slide-content" data-title="Sommaire">
+      <header class="slide-header">
+        <div class="eyebrow-row">
+          <span class="eyebrow">Plan de présentation</span>
+        </div>
+        <h2 class="slide-title">Sommaire</h2>
+        <p class="slide-subtitle">Six axes pour couvrir le besoin métier, l'architecture, la sécurité et la validation</p>
+      </header>
+
+      <div class="slide-body">
+        <div class="sommaire-grid">
+          <div class="sommaire-card" data-goto="2">
+            <div class="sommaire-num">01</div>
+            <div class="sommaire-text">
+              <h3>Contexte &amp; pilotage Agile</h3>
+              <p>Besoin M2L, périmètre fonctionnel et suivi Tuleap</p>
+            </div>
+          </div>
+
+          <div class="sommaire-card" data-goto="5">
+            <div class="sommaire-num emerald">04</div>
+            <div class="sommaire-text">
+              <h3>Annuaire &amp; conformité RGPD</h3>
+              <p>Mutualisation inter-clubs et masquage des bénévoles</p>
+            </div>
+          </div>
+
+          <div class="sommaire-card" data-goto="3">
+            <div class="sommaire-num">02</div>
+            <div class="sommaire-text">
+              <h3>Architecture MVC &amp; socle Java</h3>
+              <p>5 packages Swing pur et chargement XML durci</p>
+            </div>
+          </div>
+
+          <div class="sommaire-card" data-goto="6">
+            <div class="sommaire-num violet">05</div>
+            <div class="sommaire-text">
+              <h3>Sécurité des sauvegardes</h3>
+              <p>Format binaire <code>GEA1</code> AES-256-GCM et liste blanche</p>
+            </div>
+          </div>
+
+          <div class="sommaire-card" data-goto="4">
+            <div class="sommaire-num">03</div>
+            <div class="sommaire-text">
+              <h3>Adhérents, tarifs &amp; validation</h3>
+              <p>CRUD, classement FFE par millésime et saisie stricte</p>
+            </div>
+          </div>
+
+          <div class="sommaire-card" data-goto="7">
+            <div class="sommaire-num emerald">06</div>
+            <div class="sommaire-text">
+              <h3>Qualité logicielle &amp; bilan</h3>
+              <p>213 assertions automatisées, limites et perspectives</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <footer class="slide-footer">
+        <span>LorInfo Solutions • GEA — Cercle d'Escrime de Vandœuvre (M2L)</span>
+        <span class="page-num">02 / 08</span>
+      </footer>
+    </section>
+
+    <!-- ════════════════════════════════════════════════════════════════════════
+         SLIDE 3 : CONTEXTE & ORGANISATION AGILE
+         ════════════════════════════════════════════════════════════════════════ -->
+    <section class="slide slide-content" data-title="Contexte & Agile">
+      <header class="slide-header">
+        <div class="eyebrow-row">
+          <span class="eyebrow">01 · Contexte &amp; organisation</span>
+        </div>
+        <h2 class="slide-title">Besoin métier, périmètre &amp; pilotage Agile</h2>
+        <p class="slide-subtitle">13 User Stories livrées sur 2 sprints Tuleap pour le Cercle d'Escrime de Vandœuvre</p>
+      </header>
+
+      <div class="slide-body">
+        <div class="grid-2" style="grid-template-columns: 0.94fr 1.06fr; align-items: stretch;">
+          <div class="stack">
+            <div class="card" style="flex: 1;">
+              <div class="card-title">
+                <span>Périmètre fonctionnel livré</span>
+                <span class="badge badge-blue">US1 – US13</span>
+              </div>
+              <ul class="clean-list">
+                <li><strong>Client lourd Java 21 / Swing :</strong> données en mémoire vive et export chiffré <code>.gea</code>.</li>
+                <li><strong>Sprint 1 (US1–US6) :</strong> CRUD adhérents, responsable légal mineurs, <code>categorie.xml</code> et tarifs Annexe 1.</li>
+                <li><strong>Sprint 2 (US7–US13) :</strong> annuaire RGPD imprimable, finances, sauvegarde <code>.gea</code> et validation stricte.</li>
+              </ul>
+            </div>
+
+            <div class="card scope-card">
+              <div class="card-title">
+                <span>Hors périmètre assumé</span>
+                <span class="badge badge-slate">CDC Mission 1</span>
+              </div>
+              <div class="scope-pills">
+                <div class="scope-pill">✕ Interface web / mobile</div>
+                <div class="scope-pill">✕ Authentification / RBAC</div>
+                <div class="scope-pill">✕ Base de données SQL</div>
+                <div class="scope-pill">✕ Planning &amp; matériel</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <div class="card-title">
+                <span>Pilotage collaboratif (Tuleap Campus &amp; Git)</span>
+                <span class="badge badge-emerald">Charge équilibrée</span>
+              </div>
+
+              <div class="tuleap-kpis">
+                <div class="kpi-chip"><strong>2</strong><span>Sprints Tuleap</span></div>
+                <div class="kpi-chip"><strong>13 US</strong><span>4 Epics couverts</span></div>
+                <div class="kpi-chip"><strong>12 pts</strong><span>Par développeur</span></div>
+              </div>
+
+              <table>
+                <thead>
+                  <tr>
+                    <th>Membre</th>
+                    <th>Sprint 1</th>
+                    <th>Sprint 2</th>
+                    <th style="text-align:right;">Charge</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><strong>Elias</strong> (Dev 1)</td>
+                    <td>US1, US2, US5 <span style="color:#64748B;">(7)</span></td>
+                    <td>US8, US9 <span style="color:#64748B;">(5)</span></td>
+                    <td class="num-cell">12 pts</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Wassim</strong> (Dev 2)</td>
+                    <td>US3, US4 <span style="color:#64748B;">(6)</span></td>
+                    <td>US10, US13 <span style="color:#64748B;">(6)</span></td>
+                    <td class="num-cell">12 pts</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Youness</strong> (Dev 3)</td>
+                    <td>US6 <span style="color:#64748B;">(5)</span></td>
+                    <td>US7, US11 <span style="color:#64748B;">(7)</span></td>
+                    <td class="num-cell">12 pts</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Collectif</strong></td>
+                    <td>UML domaine (US0)</td>
+                    <td>Note RGPD (US12) + Sécu</td>
+                    <td class="num-cell" style="color:#2563EB;">Équipe</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="info-strip">
+              <strong>Jalons collectifs :</strong> modélisation UML initiale en ouverture de Sprint 1, arbitrage RGPD et audit final sécurité/tests en clôture de Sprint 2.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <footer class="slide-footer">
+        <span>LorInfo Solutions • GEA — Cercle d'Escrime de Vandœuvre (M2L)</span>
+        <span class="page-num">03 / 08</span>
+      </footer>
+    </section>
+
+    <!-- ════════════════════════════════════════════════════════════════════════
+         SLIDE 4 : ARCHITECTURE MVC
+         ════════════════════════════════════════════════════════════════════════ -->
+    <section class="slide slide-content" data-title="Architecture MVC">
+      <header class="slide-header">
+        <div class="eyebrow-row">
+          <span class="eyebrow">02 · Architecture logicielle</span>
+        </div>
+        <h2 class="slide-title">Architecture MVC &amp; modèle objet</h2>
+        <p class="slide-subtitle">Découpage strict en 5 packages Java 21, sans fichier <code>.form</code> ni dépendance externe</p>
+      </header>
+
+      <div class="slide-body">
+        <div class="mvc-diagram">
+          <div class="mvc-col mvc-vue">
+            <div class="mvc-head">Vues · <code>src/vue</code></div>
+            <div class="mvc-items">
+              <strong>Swing pur (JFrame / JDialog)</strong><br>
+              • <code>FenetrePrincipale</code><br>
+              • <code>FormulaireAdherentVue</code><br>
+              • <code>RechercheAdherentVue</code><br>
+              • <code>FicheAdherentVue</code><br>
+              • <code>AnnuaireClubsVue</code>
+            </div>
+          </div>
+
+          <div class="mvc-arrow">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path d="M4 9H20M20 9L16 5M20 15H4M4 15L8 19" stroke="#475569" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+
+          <div class="mvc-col mvc-ctrl">
+            <div class="mvc-head">Contrôleur · <code>src/controleur</code></div>
+            <div class="mvc-items">
+              <strong><code>Main</code></strong> (<code>invokeLater</code>)<br>
+              ↓<br>
+              <strong><code>AdherentControleur</code></strong><br>
+              Médiateur exclusif entre vues, managers et repositories (écouteurs et dialogues).
+            </div>
+          </div>
+
+          <div class="mvc-arrow">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path d="M4 9H20M20 9L16 5M20 15H4M4 15L8 19" stroke="#475569" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+
+          <div class="mvc-mid">
+            <div class="mvc-mgr">
+              <div class="mvc-head">Managers · <code>src/manager</code></div>
+              <div class="mvc-items">
+                • <code>AdherentManager</code> (mémoire)<br>
+                • <code>ValidateurAdherent</code> (US13)<br>
+                • <code>SauvegardeManager</code> (<code>.gea</code>)
+              </div>
+            </div>
+            <div class="mvc-repo">
+              <div class="mvc-head">Repositories · <code>src/repository</code></div>
+              <div class="mvc-items">
+                • <code>CategorieRepository</code> (XML + tarifs)<br>
+                • <code>ClubRepository</code> (XML + RGPD)
+              </div>
+            </div>
+          </div>
+
+          <div class="mvc-arrow">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path d="M4 12H20M20 12L15 7M20 12L15 17" stroke="#475569" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+
+          <div class="mvc-right">
+            <div class="mvc-mod">
+              <div class="mvc-head">Modèle · <code>src/modele</code></div>
+              <div class="mvc-items">
+                • <code>Adherent</code> (Serializable, 15 attr.)<br>
+                • <code>Categorie</code> (bornes + cotisation)<br>
+                • <code>Club</code> (nom, adresse, site, contact)
+              </div>
+            </div>
+            <div class="mvc-src">
+              <div class="mvc-head">Sources locales</div>
+              <div class="mvc-items" style="font-size: 11.2px; white-space: nowrap;">
+                <code>categorie.xml</code> · <code>club.xml</code> · <code>*.gea</code>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-3">
+          <div class="card">
+            <div class="card-title">1. Java 21 / Swing pur</div>
+            <ul class="clean-list">
+              <li>Vues 100 % codées en Java, sans générateur propriétaire <code>.form</code>.</li>
+              <li>Vues passives exposant getters et écouteurs au contrôleur.</li>
+              <li>Compilable avec le seul JDK 21.</li>
+            </ul>
+          </div>
+
+          <div class="card">
+            <div class="card-title">2. Référentiels XML durcis</div>
+            <ul class="clean-list">
+              <li>Parseurs DOM sur <code>categorie.xml</code> et <code>club.xml</code> conservés intacts.</li>
+              <li>Protection anti-XXE activée via <code>FEATURE_SECURE_PROCESSING</code>.</li>
+              <li>Extraction complète incluant <code>&lt;site&gt;</code>.</li>
+            </ul>
+          </div>
+
+          <div class="card">
+            <div class="card-title">3. Modèle métier isolé</div>
+            <ul class="clean-list">
+              <li><code>Adherent</code> : calcul d'âge et statut mineur (<code>estMineur()</code>).</li>
+              <li><code>Categorie</code> : priorité millésime FFE.</li>
+              <li>Séparation nette entre logique métier, IHM et persistance chiffrée.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <footer class="slide-footer">
+        <span>LorInfo Solutions • GEA — Cercle d'Escrime de Vandœuvre (M2L)</span>
+        <span class="page-num">04 / 08</span>
+      </footer>
+    </section>
+
+    <!-- ════════════════════════════════════════════════════════════════════════
+         SLIDE 5 : ADHÉRENTS, TARIFS & VALIDATION
+         ════════════════════════════════════════════════════════════════════════ -->
+    <section class="slide slide-content" data-title="Adhérents & tarifs">
+      <header class="slide-header">
+        <div class="eyebrow-row">
+          <span class="eyebrow">03 · Cœur métier</span>
+        </div>
+        <h2 class="slide-title">Adhérents, tarification FFE &amp; validation</h2>
+        <p class="slide-subtitle">CRUD complet en mémoire, classement FFE par année de naissance et contrôle strict des saisies</p>
+      </header>
+
+      <div class="slide-body">
+        <div class="grid-2" style="grid-template-columns: 1.05fr 0.95fr; align-items: stretch;">
+          <div class="stack">
+            <div class="card">
+              <div class="card-title">
+                <span>Gestion des adhérents &amp; finances</span>
+                <span class="badge badge-blue">US1–US5 · US9</span>
+              </div>
+              <ul class="clean-list">
+                <li><strong>CRUD en mémoire :</strong> ID auto-incrémenté (<code>AtomicInteger</code>), recherche multicritère (nom, prénom, nom de naissance, e-mail).</li>
+                <li><strong>Mineurs (&lt; 18 ans) :</strong> bloc <em>Responsable légal</em> affiché et exigé dynamiquement selon la date de naissance.</li>
+                <li><strong>Récapitulatif financier :</strong> ventilation par catégorie et total calculés automatiquement, sans ressaisie.</li>
+              </ul>
+            </div>
+
+            <div class="card" style="flex: 1;">
+              <div class="card-title">
+                <span>Validation centralisée : <code>ValidateurAdherent</code></span>
+                <span class="badge badge-emerald">US13</span>
+              </div>
+              <ul class="clean-list emerald">
+                <li><strong>Dates strictes :</strong> format <code>dd/MM/uuuu</code> en <code>ResolverStyle.STRICT</code> (rejet de <code>31/02</code>, futur et <code>&lt; 1900</code>).</li>
+                <li><strong>Formats &amp; listes fermées :</strong> regex e-mail, téléphone FR (<code>0X</code> / <code>+33</code>), code postal (5 chiffres), arme / pratique / latéralité.</li>
+                <li><strong>Réutilisabilité :</strong> mêmes règles partagées entre ajout, modification et tests unitaires.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="stack">
+            <div class="callout-amber">
+              <h4>Choix métier clé : Année de naissance vs Âge (US6)</h4>
+              <p><strong>Problème évité :</strong> calculer l'âge révolu au jour près déclassait un enfant né le <code>15/12/2019</code> (6 ans en nov. 2026) en <em>Atomes</em>.<br>
+              <strong>Solution :</strong> priorité à l'année de naissance (<code>2018–2019</code> = <em>Poussins</em>), conforme à la règle FFE et à <code>categorie.xml</code>.</p>
+            </div>
+
+            <div class="card" style="flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
+              <div class="card-title" style="margin-bottom: 8px;">
+                <span>Grille tarifaire Annexe 1</span>
+                <span class="badge badge-slate">10 catégories XML</span>
+              </div>
+              <div class="tarifs-grid">
+                <table>
+                  <thead>
+                    <tr><th>Catégorie</th><th>Années</th><th style="text-align:right;">Tarif</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr><td>Eveil (M5)</td><td>2022–2026</td><td class="num-cell">90 €</td></tr>
+                    <tr><td>Atomes (M7)</td><td>2020–2021</td><td class="num-cell">130 €</td></tr>
+                    <tr><td>Poussins (M9)</td><td>2018–2019</td><td class="num-cell">160 €</td></tr>
+                    <tr><td>Pupilles (M11)</td><td>2016–2017</td><td class="num-cell">180 €</td></tr>
+                    <tr><td>Benjamins (M13)</td><td>2014–2015</td><td class="num-cell">210 €</td></tr>
+                  </tbody>
+                </table>
+                <table>
+                  <thead>
+                    <tr><th>Catégorie</th><th>Années</th><th style="text-align:right;">Tarif</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr><td>Minimes (M15)</td><td>2012–2013</td><td class="num-cell">210 €</td></tr>
+                    <tr><td>Cadets (M17)</td><td>2010–2011</td><td class="num-cell">230 €</td></tr>
+                    <tr><td>Juniors (M20)</td><td>2007–2009</td><td class="num-cell">230 €</td></tr>
+                    <tr><td>Séniors</td><td>1988–2006</td><td class="num-cell">255 €</td></tr>
+                    <tr><td>Vétérans</td><td>1930–1987</td><td class="num-cell">255 €</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <p style="font-size: 11.5px; color: #64748B; margin-top: 8px;">Affichée automatiquement sur <code>FicheAdherentVue</code> et sommée dans le récapitulatif financier.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <footer class="slide-footer">
+        <span>LorInfo Solutions • GEA — Cercle d'Escrime de Vandœuvre (M2L)</span>
+        <span class="page-num">05 / 08</span>
+      </footer>
+    </section>
+
+    <!-- ════════════════════════════════════════════════════════════════════════
+         SLIDE 6 : ANNUAIRE & CONFORMITÉ RGPD
+         ════════════════════════════════════════════════════════════════════════ -->
+    <section class="slide slide-content" data-title="Annuaire & RGPD">
+      <header class="slide-header">
+        <div class="eyebrow-row">
+          <span class="eyebrow eyebrow-emerald">04 · Conformité RGPD</span>
+        </div>
+        <h2 class="slide-title">Annuaire des clubs &amp; protection des bénévoles</h2>
+        <p class="slide-subtitle">Arbitrage assumé entre mutualisation inter-clubs et minimisation des données (<code>note_rgpd.md</code>)</p>
+      </header>
+
+      <div class="slide-body">
+        <div class="grid-2" style="margin-bottom: 18px;">
+          <div class="card">
+            <div class="card-title">
+              <span>Annuaire consultable &amp; imprimable</span>
+              <span class="badge badge-blue">US7 – US8</span>
+            </div>
+            <ul class="clean-list">
+              <li><strong>10 clubs lorrains :</strong> chargés depuis <code>club.xml</code> avec extraction de la ville et de la balise <code>&lt;site&gt;</code>.</li>
+              <li><strong>Consultation :</strong> <code>JTable</code> non éditable et triable avec bandeau d'avertissement RGPD.</li>
+              <li><strong>Sorties :</strong> impression directe (<code>FIT_WIDTH</code>) et export HTML imprimable.</li>
+            </ul>
+          </div>
+
+          <div class="card">
+            <div class="card-title">
+              <span>Positionnement RGPD assumé</span>
+              <span class="badge badge-emerald">US12</span>
+            </div>
+            <ul class="clean-list emerald">
+              <li><strong>Données publiques en clair :</strong> nom, ville, adresse et site web du club (personnes morales).</li>
+              <li><strong>Données personnelles masquées :</strong> nom, téléphone et e-mail du bénévole anonymisés en mémoire.</li>
+              <li><strong>Zéro contournement :</strong> aucun bouton « démasquer » ; impression et export HTML restent anonymisés.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">
+            <span>Impact concret du masquage par défaut (exemple : <code>C.E LAXOVIEN</code>)</span>
+            <span class="badge badge-slate">club.xml intact vs mémoire / UI / HTML</span>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 22%;">Champ</th>
+                <th style="width: 32%;">Source XML (<code>club.xml</code>)</th>
+                <th style="width: 32%;">Rendu en mémoire / UI / HTML</th>
+                <th style="width: 14%; text-align:right;">Statut RGPD</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Club / Adresse / Site</strong></td>
+                <td>C.E LAXOVIEN — Azelot — escrime-laxou.net</td>
+                <td>C.E LAXOVIEN — Azelot — escrime-laxou.net</td>
+                <td style="text-align:right;"><span class="badge badge-blue">Public (en clair)</span></td>
+              </tr>
+              <tr>
+                <td><strong>Nom du bénévole</strong></td>
+                <td>M. SILBERSCHMIDT Gilles</td>
+                <td><code>M. S*** G.</code></td>
+                <td style="text-align:right;"><span class="badge badge-emerald">Masqué</span></td>
+              </tr>
+              <tr>
+                <td><strong>Téléphone bénévole</strong></td>
+                <td>03.83.46.77.22</td>
+                <td><code>03.**.**.**.**</code></td>
+                <td style="text-align:right;"><span class="badge badge-emerald">Masqué</span></td>
+              </tr>
+              <tr>
+                <td><strong>E-mail bénévole</strong></td>
+                <td>contact@escrime-laxou.net</td>
+                <td><code>c***@escrime-laxou.net</code></td>
+                <td style="text-align:right;"><span class="badge badge-emerald">Masqué</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <footer class="slide-footer">
+        <span>LorInfo Solutions • GEA — Cercle d'Escrime de Vandœuvre (M2L)</span>
+        <span class="page-num">06 / 08</span>
+      </footer>
+    </section>
+
+    <!-- ════════════════════════════════════════════════════════════════════════
+         SLIDE 7 : SÉCURITÉ DES SAUVEGARDES .GEA
+         ════════════════════════════════════════════════════════════════════════ -->
+    <section class="slide slide-content" data-title="Sécurité GEA1">
+      <header class="slide-header">
+        <div class="eyebrow-row">
+          <span class="eyebrow eyebrow-violet">05 · Sécurité &amp; persistance</span>
+        </div>
+        <h2 class="slide-title">Sauvegardes chiffrées au format <code>GEA1</code></h2>
+        <p class="slide-subtitle">Confidentialité AES-256-GCM, intégrité authentifiée et durcissement de la désérialisation</p>
+      </header>
+
+      <div class="slide-body">
+        <div class="callout-violet">
+          <strong>Problème évité :</strong> un <code>ObjectOutputStream</code> brut exposerait les adhérents en clair sur disque et ouvrirait une faille de désérialisation arbitraire.
+          <strong>Solution (<code>SauvegardeManager</code>) :</strong> enveloppe chiffrée authentifiée <code>GEA1</code> + liste blanche stricte.
+        </div>
+
+        <div class="gea-frame-card">
+          <div class="card-title" style="margin-bottom: 4px;">
+            <span>Structure du format binaire <code>GEA1</code></span>
+            <span class="badge badge-violet">US10 · US11</span>
+          </div>
+          <div class="gea-grid">
+            <div class="gea-header-blocks">
+              <div class="gea-block gea-b1">
+                <strong>Magique</strong>
+                <span>"GEA1" (4 o)</span>
+              </div>
+              <div class="gea-block gea-b2">
+                <strong>Version</strong>
+                <span>0x01 (1 o)</span>
+              </div>
+              <div class="gea-block gea-b3">
+                <strong>Sel PBKDF2</strong>
+                <span>16 o aléatoires</span>
+              </div>
+              <div class="gea-block gea-b4">
+                <strong>IV GCM</strong>
+                <span>12 o aléatoires</span>
+              </div>
+            </div>
+
+            <div class="gea-block gea-b5">
+              <strong>Données chiffrées AES-256-GCM + Tag 128 bits</strong>
+              <span>List&lt;Adherent&gt; protégée contre lecture et altération</span>
+            </div>
+
+            <div class="aad-wrap">
+              <div class="aad-bar"></div>
+            </div>
+            <div class="aad-label">En-tête authentifié en AAD (<code>cipher.updateAAD</code>) : toute modification d'un octet invalide le tag GCM</div>
+          </div>
+        </div>
+
+        <div class="grid-3">
+          <div class="card">
+            <div class="card-title">1. Crypto &amp; hygiène mémoire</div>
+            <ul class="clean-list violet">
+              <li><code>PBKDF2WithHmacSHA256</code> (65 536 itér.) + sel unique → clé 256 bits.</li>
+              <li><code>AES/GCM/NoPadding</code> avec tag d'authentification 128 bits.</li>
+              <li>Effacement immédiat (<code>Arrays.fill</code>) du mot de passe et de la clé.</li>
+            </ul>
+          </div>
+
+          <div class="card">
+            <div class="card-title">2. Liste blanche <code>ObjectInputFilter</code></div>
+            <ul class="clean-list violet">
+              <li>Appliquée après vérification du tag GCM.</li>
+              <li><strong>6 classes autorisées :</strong> <code>ArrayList</code>, <code>Object[]</code>, <code>Adherent</code>, <code>LocalDate</code>, <code>java.time.Ser</code>, <code>String</code>.</li>
+              <li>Bornes anti-DoS : prof. ≤ 20, réf./tab. ≤ 100 000, fichier ≤ 50 Mo.</li>
+            </ul>
+          </div>
+
+          <div class="card">
+            <div class="card-title">3. Erreurs non destructives</div>
+            <ul class="clean-list violet">
+              <li><code>importerDonnees()</code> retourne <code>null</code> sans exception brute (absent, altéré, mauvais MdP).</li>
+              <li><strong>Mémoire préservée :</strong> la liste active n'est écrasée qu'en cas de succès.</li>
+              <li>Diagnostic clair via <code>getDernierMessageErreur()</code>.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <footer class="slide-footer">
+        <span>LorInfo Solutions • GEA — Cercle d'Escrime de Vandœuvre (M2L)</span>
+        <span class="page-num">07 / 08</span>
+      </footer>
+    </section>
+
+    <!-- ════════════════════════════════════════════════════════════════════════
+         SLIDE 8 : QUALITÉ LOGICIELLE, LIMITES & BILAN
+         ════════════════════════════════════════════════════════════════════════ -->
+    <section class="slide slide-content" data-title="Tests & bilan">
+      <header class="slide-header">
+        <div class="eyebrow-row">
+          <span class="eyebrow eyebrow-emerald">06 · Qualité &amp; bilan</span>
+        </div>
+        <h2 class="slide-title">Validation automatisée, limites &amp; perspectives</h2>
+        <p class="slide-subtitle">213 assertions vérifiées sans dépendance externe sous JDK 21 et feuille de route M2L</p>
+      </header>
+
+      <div class="slide-body">
+        <div class="grid-2" style="grid-template-columns: 1.16fr 0.84fr; align-items: stretch;">
+          <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <div class="card-title">
+                <span>Suite de tests autonome · <code>test/LanceurTests.java</code></span>
+                <span class="badge badge-emerald">0 échec</span>
+              </div>
+
+              <div class="kpi-hero">
+                <div>
+                  <div class="kpi-hero-main">213 assertions vérifiées · 4 suites</div>
+                  <div class="kpi-hero-sub">Exécution sans JUnit via <code>javac</code> + <code>java -Djava.awt.headless=true</code></div>
+                </div>
+                <span class="badge badge-emerald" style="font-size: 12.5px; padding: 5px 12px;">100 % PASS</span>
+              </div>
+
+              <table>
+                <thead>
+                  <tr>
+                    <th>Classe de test</th>
+                    <th>US</th>
+                    <th>Couverture vérifiée</th>
+                    <th style="text-align:right;">Assert.</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><code>CategorieEtTarifTest</code></td>
+                    <td><span class="badge badge-blue">US6</span></td>
+                    <td>10 catégories XML, bornes &amp; tarifs</td>
+                    <td class="num-cell">51</td>
+                  </tr>
+                  <tr>
+                    <td><code>ValidateurAdherentTest</code></td>
+                    <td><span class="badge badge-emerald">US13</span></td>
+                    <td>Dates strictes (29/02), regex, mineurs</td>
+                    <td class="num-cell">68</td>
+                  </tr>
+                  <tr>
+                    <td><code>RecapitulatifFinancierTest</code></td>
+                    <td><span class="badge badge-blue">US9</span></td>
+                    <td>Totaux et ventilation par catégorie</td>
+                    <td class="num-cell">20</td>
+                  </tr>
+                  <tr>
+                    <td><code>SauvegardeEtAnnuaireTest</code></td>
+                    <td><span class="badge badge-violet">US10/11/7</span></td>
+                    <td>GEA1, mauvais MdP, filtre, RGPD HTML</td>
+                    <td class="num-cell">74</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="livrables-strip">
+              <strong>Livrables :</strong> code &amp; tests Java 21 · <code>documentation_technique.md</code> · <code>note_rgpd.md</code> · diagramme <code>GEA.drawio</code> · Tuleap &amp; Git.
+            </div>
+          </div>
+
+          <div class="stack">
+            <div class="card">
+              <div class="card-title">
+                <span>Limites assumées</span>
+                <span class="badge badge-amber">Périmètre CDC</span>
+              </div>
+              <ul class="clean-list amber">
+                <li><strong>Stockage volatil en session :</strong> sans export <code>.gea</code> avant fermeture, les saisies en mémoire sont perdues.</li>
+                <li><strong>Mono-poste sans authentification :</strong> conforme au hors périmètre, suppose un poste de confiance.</li>
+              </ul>
+            </div>
+
+            <div class="card" style="flex: 1;">
+              <div class="card-title">
+                <span>Perspectives d'évolution</span>
+                <span class="badge badge-blue">Évolutions M2L</span>
+              </div>
+              <ul class="clean-list">
+                <li><strong>Persistance locale chiffrée :</strong> SQLite / PostgreSQL pour sauvegarde automatique à la volée.</li>
+                <li><strong>Gestion des droits (RBAC) :</strong> profils <em>Secrétaire</em>, <em>Trésorier</em> et <em>Président</em> authentifiés.</li>
+                <li><strong>Mutualisation M2L :</strong> déploiement aux autres clubs d'escrime lorrains.</li>
+              </ul>
+            </div>
+
+            <div class="closing-banner">
+              Mission 1 livrée : sécurisée, testée et conforme RGPD
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <footer class="slide-footer">
+        <span>LorInfo Solutions • GEA — Cercle d'Escrime de Vandœuvre (M2L)</span>
+        <span class="page-num">08 / 08</span>
+      </footer>
+    </section>
+
+  </div>
+</main>
+
+<!-- ── HUD FLOTTANT DE NAVIGATION ── -->
+<nav id="hud" aria-label="Navigation diaporama">
+  <button class="hud-btn" id="btn-prev" type="button" title="Précédent (←)">‹ Précédent</button>
+  <span class="hud-counter" id="hud-counter">01 / 08</span>
+  <button class="hud-btn" id="btn-next" type="button" title="Suivant (→ ou Espace)">Suivant ›</button>
+  <span class="hud-sep"></span>
+  <button class="hud-btn" id="btn-grid" type="button" title="Vue grille (G)">Grille <span class="hud-kbd">G</span></button>
+  <button class="hud-btn" id="btn-black" type="button" title="Écran noir pour démo (B)">Écran noir <span class="hud-kbd">B</span></button>
+  <button class="hud-btn" id="btn-fs" type="button" title="Plein écran (F)">Plein écran <span class="hud-kbd">F</span></button>
+</nav>
+
+<!-- ── VUE GRILLE DES SLIDES ── -->
+<section id="overview" aria-label="Aperçu des diapositives">
+  <div class="overview-header">
+    <h2>Aperçu des diapositives</h2>
+    <span>Cliquer sur une diapositive ou appuyer sur <strong>G</strong> / <strong>Échap</strong> pour fermer</span>
+  </div>
+  <div class="overview-grid" id="overview-grid"></div>
+</section>
+
+<!-- ── ÉCRAN NOIR (COUPURE DÉMO) ── -->
+<div id="blackout">Appuyez sur <strong>B</strong> ou <strong>Échap</strong> pour reprendre le diaporama</div>
+
+<script>
+(() => {
+  const slides = Array.from(document.querySelectorAll(".slide"));
+  const stage = document.getElementById("stage");
+  const progressBar = document.getElementById("progress-bar");
+  const hudCounter = document.getElementById("hud-counter");
+  const btnPrev = document.getElementById("btn-prev");
+  const btnNext = document.getElementById("btn-next");
+  const btnGrid = document.getElementById("btn-grid");
+  const btnBlack = document.getElementById("btn-black");
+  const btnFs = document.getElementById("btn-fs");
+  const overview = document.getElementById("overview");
+  const overviewGrid = document.getElementById("overview-grid");
+  const blackout = document.getElementById("blackout");
+
+  let current = 0;
+  let hudTimer = null;
+
+  function fitStage() {
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const scale = Math.min(vw / 1280, vh / 720);
+    stage.style.transform = `scale(${scale})`;
+    scaleThumbs();
+  }
+
+  function scaleThumbs() {
+    const frames = overviewGrid.querySelectorAll(".thumb-frame");
+    frames.forEach((frame) => {
+      const inner = frame.querySelector(".thumb-inner");
+      if (!inner) return;
+      const w = frame.clientWidth;
+      if (w > 0) {
+        inner.style.transform = `scale(${w / 1280})`;
+      }
+    });
+  }
+
+  function buildOverview() {
+    overviewGrid.innerHTML = "";
+    slides.forEach((slide, idx) => {
+      const card = document.createElement("button");
+      card.type = "button";
+      card.className = "thumb-card" + (idx === current ? " current" : "");
+      card.addEventListener("click", () => {
+        goTo(idx);
+        toggleOverview(false);
+      });
+
+      const frame = document.createElement("div");
+      frame.className = "thumb-frame";
+      const clone = slide.cloneNode(true);
+      clone.classList.add("active");
+      clone.style.position = "relative";
+      clone.style.opacity = "1";
+      clone.style.transform = "none";
+      const inner = document.createElement("div");
+      inner.className = "thumb-inner";
+      inner.appendChild(clone);
+      frame.appendChild(inner);
+
+      const meta = document.createElement("div");
+      meta.className = "thumb-meta";
+      const title = slide.getAttribute("data-title") || `Slide ${idx + 1}`;
+      meta.innerHTML = `<span>${title}</span><span class="thumb-num">${String(idx + 1).padStart(2, "0")}</span>`;
+
+      card.appendChild(frame);
+      card.appendChild(meta);
+      overviewGrid.appendChild(card);
+    });
+    scaleThumbs();
+  }
+
+  function goTo(index, updateHash = true) {
+    const target = Math.max(0, Math.min(slides.length - 1, index));
+    slides.forEach((s, i) => s.classList.toggle("active", i === target));
+    current = target;
+
+    const num = String(current + 1).padStart(2, "0");
+    const tot = String(slides.length).padStart(2, "0");
+    hudCounter.textContent = `${num} / ${tot}`;
+    progressBar.style.width = `${((current + 1) / slides.length) * 100}%`;
+    btnPrev.disabled = current === 0;
+    btnNext.disabled = current === slides.length - 1;
+
+    overviewGrid.querySelectorAll(".thumb-card").forEach((c, i) => {
+      c.classList.toggle("current", i === current);
+    });
+
+    if (updateHash) {
+      history.replaceState(null, "", `#${current + 1}`);
+    }
+    pokeHud();
+  }
+
+  function toggleOverview(force) {
+    const next = typeof force === "boolean" ? force : !overview.classList.contains("open");
+    overview.classList.toggle("open", next);
+    btnGrid.classList.toggle("active", next);
+    if (next) {
+      requestAnimationFrame(scaleThumbs);
+    }
+    pokeHud();
+  }
+
+  function toggleBlackout(force) {
+    const next = typeof force === "boolean" ? force : !blackout.classList.contains("open");
+    blackout.classList.toggle("open", next);
+    btnBlack.classList.toggle("active", next);
+    pokeHud();
+  }
+
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen?.().catch(() => {});
+    } else {
+      document.exitFullscreen?.().catch(() => {});
+    }
+    pokeHud();
+  }
+
+  function pokeHud() {
+    document.body.classList.remove("hud-hidden");
+    clearTimeout(hudTimer);
+    if (!overview.classList.contains("open")) {
+      hudTimer = setTimeout(() => {
+        document.body.classList.add("hud-hidden");
+      }, 2400);
+    }
+  }
+
+  // Click sur les cartes du sommaire
+  document.querySelectorAll(".sommaire-card[data-goto]").forEach((card) => {
+    card.addEventListener("click", () => {
+      const idx = parseInt(card.getAttribute("data-goto"), 10);
+      if (!Number.isNaN(idx)) goTo(idx);
+    });
+  });
+
+  btnPrev.addEventListener("click", () => goTo(current - 1));
+  btnNext.addEventListener("click", () => goTo(current + 1));
+  btnGrid.addEventListener("click", () => toggleOverview());
+  btnBlack.addEventListener("click", () => toggleBlackout());
+  btnFs.addEventListener("click", () => toggleFullscreen());
+  blackout.addEventListener("click", () => toggleBlackout(false));
+
+  document.addEventListener("mousemove", pokeHud);
+  document.addEventListener("mousedown", pokeHud);
+  document.addEventListener("fullscreenchange", () => {
+    btnFs.classList.toggle("active", Boolean(document.fullscreenElement));
+    fitStage();
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+    if (blackout.classList.contains("open")) {
+      if (e.key === "Escape" || e.key.toLowerCase() === "b" || e.key === ".") {
+        e.preventDefault();
+        toggleBlackout(false);
+      }
+      return;
+    }
+
+    if (overview.classList.contains("open")) {
+      if (e.key === "Escape" || e.key.toLowerCase() === "g") {
+        e.preventDefault();
+        toggleOverview(false);
+      }
+      return;
+    }
+
+    switch (e.key) {
+      case "ArrowRight":
+      case "PageDown":
+      case " ":
+      case "Enter":
+        e.preventDefault();
+        goTo(current + 1);
+        break;
+      case "ArrowLeft":
+      case "PageUp":
+      case "Backspace":
+        e.preventDefault();
+        goTo(current - 1);
+        break;
+      case "Home":
+        e.preventDefault();
+        goTo(0);
+        break;
+      case "End":
+        e.preventDefault();
+        goTo(slides.length - 1);
+        break;
+      case "g":
+      case "G":
+        e.preventDefault();
+        toggleOverview();
+        break;
+      case "b":
+      case "B":
+      case ".":
+        e.preventDefault();
+        toggleBlackout();
+        break;
+      case "f":
+      case "F":
+        e.preventDefault();
+        toggleFullscreen();
+        break;
+      default: {
+        const n = parseInt(e.key, 10);
+        if (n >= 1 && n <= slides.length) {
+          e.preventDefault();
+          goTo(n - 1);
+        }
+      }
+    }
+  });
+
+  window.addEventListener("resize", fitStage);
+
+  const hashMatch = window.location.hash.match(/^#(\d+)$/);
+  const initial = hashMatch ? parseInt(hashMatch[1], 10) - 1 : 0;
+
+  buildOverview();
+  fitStage();
+  goTo(initial, false);
+})();
+</script>
+</body>
+</html>
+

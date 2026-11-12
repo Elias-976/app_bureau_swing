@@ -67,3 +67,4 @@ Lorsque l'utilisateur exporte les données vers un fichier local via [`Sauvegard
 1. **Information des personnes** : remettre une mention d'information RGPD lors de l'inscription (finalité associative, durée de conservation, contact du responsable de traitement au sein du Cercle d'Escrime de Vandœuvre).
 2. **Gestion des sauvegardes** : saisir systématiquement un mot de passe robuste lors des exports (`exporterDonnees(..., char[] motDePasse)`) et conserver les fichiers de sauvegarde sur un support sécurisé à accès restreint.
 3. **Purge périodique** : supprimer chaque saison les fiches des anciens adhérents qui ne renouvellent pas leur licence afin de respecter la limitation de la durée de conservation.
+

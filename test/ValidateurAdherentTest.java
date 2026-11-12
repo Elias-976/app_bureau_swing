@@ -254,3 +254,4 @@ public final class ValidateurAdherentTest {
                 "L'adhérent existant reste intact après rejet de modification");
     }
 }
+
