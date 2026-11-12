@@ -150,3 +150,4 @@ public final class CategorieEtTarifTest {
         OutilAssertions.assertFalse(jourMajorite.estMineur(), "18 ans est majeur");
     }
 }
+

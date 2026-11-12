@@ -1,14 +1,20 @@
 package controleur;
 
 import manager.AdherentManager;
+import manager.AuthentificationException;
+import manager.AuthentificationManager;
 import manager.SauvegardeManager;
 import manager.ValidateurAdherent;
 import modele.Adherent;
 import modele.Categorie;
+import modele.Club;
+import modele.Droit;
+import modele.Utilisateur;
 import repository.CategorieRepository;
 import repository.ClubRepository;
-import modele.Club;
 import vue.AnnuaireClubsVue;
+import vue.ChangementMotDePasseVue;
+import vue.ConnexionVue;
 import vue.FenetrePrincipale;
 import vue.FicheAdherentVue;
 import vue.FormulaireAdherentVue;
@@ -18,6 +24,7 @@ import javax.swing.*;
 import javax.swing.event.AncestorEvent;
 import javax.swing.event.AncestorListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
+import java.awt.GraphicsEnvironment;
 import java.awt.GridLayout;
 import java.io.File;
 import java.io.IOException;
@@ -30,20 +37,21 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Contrôleur MVC pour la gestion des adhérents et de toute la fenêtre principale.
+ * Contrôleur MVC pour la gestion des adhérents, de l'authentification et de toute la fenêtre principale.
  *
- * <p>Fait le lien entre les vues (formulaire, recherche, fiche, annuaire, finances, sauvegarde)
- * et les modèles ({@link AdherentManager}, {@link SauvegardeManager},
+ * <p>Fait le lien entre les vues (connexion, formulaire, recherche, fiche, annuaire, finances, sauvegarde)
+ * et les modèles ({@link AuthentificationManager}, {@link AdherentManager}, {@link SauvegardeManager},
  * {@link CategorieRepository}, {@link ClubRepository}).</p>
  */
 public class AdherentControleur {
 
     // ── Dépendances (MVC) ──────────────────────────────────────────────────────
-    private final AdherentManager   manager;
-    private final FenetrePrincipale fenetrePrincipale;
-    private final SauvegardeManager sauvegardeManager;
-    private final CategorieRepository categorieRepository;
-    private final ClubRepository    clubRepository;
+    private final AdherentManager        manager;
+    private final FenetrePrincipale      fenetrePrincipale;
+    private final AuthentificationManager authManager;
+    private final SauvegardeManager      sauvegardeManager;
+    private final CategorieRepository    categorieRepository;
+    private final ClubRepository         clubRepository;
 
     /** Chemin relatif vers le fichier des catégories */
     private static final String CHEMIN_CATEGORIES = "document/categorie.xml";
@@ -51,21 +59,174 @@ public class AdherentControleur {
     /** Chemin relatif vers le fichier des clubs */
     private static final String CHEMIN_CLUBS = "document/club.xml";
 
-    // ── Constructeur ───────────────────────────────────────────────────────────
+    // ── Constructeurs ──────────────────────────────────────────────────────────
 
     public AdherentControleur(FenetrePrincipale fenetrePrincipale,
                                AdherentManager manager) {
+        this(fenetrePrincipale, manager, new AuthentificationManager());
+    }
+
+    public AdherentControleur(FenetrePrincipale fenetrePrincipale,
+                               AdherentManager manager,
+                               AuthentificationManager authManager) {
         this.fenetrePrincipale   = fenetrePrincipale;
         this.manager             = manager;
+        this.authManager         = authManager;
         this.sauvegardeManager   = new SauvegardeManager();
         this.categorieRepository = new CategorieRepository();
         this.clubRepository      = new ClubRepository();
         brancherActions();
+        initialiserSession();
+    }
+
+    // ── Initialisation de la session & Authentification ────────────────────────
+
+    /**
+     * Lance le dialogue de connexion si nécessaire puis configure les accès de la fenêtre.
+     */
+    public void initialiserSession() {
+        if (GraphicsEnvironment.isHeadless()) {
+            return;
+        }
+
+        if (!authManager.estConnecte()) {
+            boolean connecte = ouvrirDialogueConnexion();
+            if (!connecte) {
+                System.exit(0);
+                return;
+            }
+        }
+
+        fenetrePrincipale.appliquerDroits(authManager.getUtilisateurConnecte());
+        fenetrePrincipale.afficher();
+    }
+
+    /**
+     * Ouvre la fenêtre modale de connexion.
+     *
+     * @return {@code true} si la connexion a été établie avec succès
+     */
+    public boolean ouvrirDialogueConnexion() {
+        ConnexionVue vueConnexion = new ConnexionVue(fenetrePrincipale);
+        vueConnexion.ajouterEcouteurConnexion(e -> {
+            String identifiant = vueConnexion.getIdentifiant();
+            char[] motDePasse  = vueConnexion.getMotDePasse();
+            try {
+                authManager.connecter(identifiant, motDePasse);
+                vueConnexion.setConnexionValidee(true);
+                vueConnexion.dispose();
+            } catch (AuthentificationException ex) {
+                vueConnexion.afficherErreur(ex.getMessage());
+                vueConnexion.effacerMotDePasse();
+            }
+        });
+
+        vueConnexion.ajouterEcouteurQuitter(e -> {
+            vueConnexion.setConnexionValidee(false);
+            vueConnexion.dispose();
+        });
+
+        vueConnexion.setVisible(true);
+        return vueConnexion.isConnexionValidee();
+    }
+
+    /**
+     * Déconnecte l'utilisateur en cours et réaffiche l'écran de connexion.
+     */
+    public void deconnecter() {
+        int choix = JOptionPane.showConfirmDialog(
+                fenetrePrincipale,
+                "Voulez-vous vraiment vous déconnecter de l'application ?",
+                "Déconnexion",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.QUESTION_MESSAGE);
+        if (choix != JOptionPane.YES_OPTION) {
+            return;
+        }
+
+        authManager.deconnecter();
+        fenetrePrincipale.setVisible(false);
+        fenetrePrincipale.appliquerDroits(null);
+
+        boolean reconnecte = ouvrirDialogueConnexion();
+        if (reconnecte) {
+            fenetrePrincipale.appliquerDroits(authManager.getUtilisateurConnecte());
+            fenetrePrincipale.afficher();
+        } else {
+            System.exit(0);
+        }
+    }
+
+    /**
+     * Ouvre la boîte de dialogue de changement de mot de passe pour la session active.
+     */
+    public void ouvrirChangementMotDePasse() {
+        if (!authManager.estConnecte()) return;
+        Utilisateur user = authManager.getUtilisateurConnecte();
+
+        ChangementMotDePasseVue vue = new ChangementMotDePasseVue(
+                fenetrePrincipale, user.getIdentifiant());
+
+        vue.ajouterEcouteurValider(e -> {
+            char[] ancienMdp       = vue.getAncienMotDePasse();
+            char[] nouveauMdp      = vue.getNouveauMotDePasse();
+            char[] confirmationMdp = vue.getConfirmation();
+            try {
+                authManager.changerMotDePasse(user.getIdentifiant(), ancienMdp, nouveauMdp, confirmationMdp);
+                JOptionPane.showMessageDialog(vue,
+                        "Votre mot de passe a été modifié avec succès !",
+                        "Mot de passe mis à jour",
+                        JOptionPane.INFORMATION_MESSAGE);
+                vue.dispose();
+            } catch (AuthentificationException ex) {
+                vue.afficherErreur(ex.getMessage());
+            }
+        });
+
+        vue.setVisible(true);
+    }
+
+    /**
+     * Vérifie si la session active possède le droit demandé.
+     * Affiche un message d'avertissement explicite en cas de refus.
+     *
+     * @param droit le privilège requis
+     * @return {@code true} si l'action est autorisée
+     */
+    public boolean verifierDroit(Droit droit) {
+        if (authManager == null) return true;
+        if (!authManager.estConnecte()) {
+            JOptionPane.showMessageDialog(fenetrePrincipale,
+                    "Veuillez vous connecter pour accéder à cette fonctionnalité.",
+                    "Authentification requise", JOptionPane.WARNING_MESSAGE);
+            return false;
+        }
+        if (!authManager.aLeDroit(droit)) {
+            String roleStr = authManager.getUtilisateurConnecte().getRole().getLibelleCourt();
+            JOptionPane.showMessageDialog(fenetrePrincipale,
+                    String.format("Accès refusé :\nVotre profil « %s » n'est pas autorisé à effectuer cette opération (%s).",
+                            roleStr, droit.getDescription()),
+                    "Accès restreint (RBAC)", JOptionPane.ERROR_MESSAGE);
+            return false;
+        }
+        return true;
     }
 
     // ── Branchement des actions ────────────────────────────────────────────────
 
     private void brancherActions() {
+        // ── Menu Session ───────────────────────────────────────────────────────
+        fenetrePrincipale.getMenuItemDeconnexion()
+                .addActionListener(e -> deconnecter());
+        fenetrePrincipale.getMenuItemChangerMdp()
+                .addActionListener(e -> ouvrirChangementMotDePasse());
+
+        // ── Boutons du bandeau de session ──────────────────────────────────────
+        fenetrePrincipale.getBtnDeconnexion()
+                .addActionListener(e -> deconnecter());
+        fenetrePrincipale.getBtnChangerMotDePasse()
+                .addActionListener(e -> ouvrirChangementMotDePasse());
+
         // ── Menu Adhérents ─────────────────────────────────────────────────────
         fenetrePrincipale.getMenuItemNouvelAdherent()
                 .addActionListener(e -> ouvrirFormulaireAjout());
@@ -108,6 +269,10 @@ public class AdherentControleur {
     // ── Action : Nouvel adhérent ───────────────────────────────────────────────
 
     public void ouvrirFormulaireAjout() {
+        if (!verifierDroit(Droit.GESTION_ADHERENTS)) {
+            return;
+        }
+
         FormulaireAdherentVue formulaire =
                 new FormulaireAdherentVue(fenetrePrincipale, "Nouvel adhérent");
         brancherMiseAJourRespLegal(formulaire);
@@ -119,7 +284,13 @@ public class AdherentControleur {
     // ── Action : Rechercher un adhérent ───────────────────────────────────────
 
     public void ouvrirRechercheAdherent() {
+        if (!verifierDroit(Droit.CONSULTATION_ADHERENTS)) {
+            return;
+        }
+
         RechercheAdherentVue vue = new RechercheAdherentVue(fenetrePrincipale);
+        boolean peutModifier = authManager.aLeDroit(Droit.GESTION_ADHERENTS);
+        vue.setDroitModification(peutModifier);
 
         // Afficher tous les adhérents au démarrage
         vue.afficherResultats(manager.getListeAdherents());
@@ -139,8 +310,11 @@ public class AdherentControleur {
                 List<Categorie> cats = chargerCategories();
                 Categorie cat = manager.trouverCategorie(a, cats);
                 FicheAdherentVue fiche = new FicheAdherentVue(fenetrePrincipale, a, cat);
+                fiche.setDroitModification(peutModifier);
+
                 // Bouton Modifier depuis la fiche
                 fiche.ajouterEcouteurModifier(ev -> {
+                    if (!verifierDroit(Droit.GESTION_ADHERENTS)) return;
                     fiche.dispose();
                     ouvrirFormulaireModification(a, vue);
                 });
@@ -150,6 +324,7 @@ public class AdherentControleur {
 
         // Bouton Modifier
         vue.ajouterEcouteurModifier(e -> {
+            if (!verifierDroit(Droit.GESTION_ADHERENTS)) return;
             int id = vue.getIdAdherentSelectionne();
             if (id < 0) return;
             Adherent a = trouverParId(id);
@@ -158,6 +333,7 @@ public class AdherentControleur {
 
         // Bouton Supprimer
         vue.ajouterEcouteurSupprimer(e -> {
+            if (!verifierDroit(Droit.GESTION_ADHERENTS)) return;
             int id = vue.getIdAdherentSelectionne();
             if (id < 0) return;
             Adherent a = trouverParId(id);
@@ -185,18 +361,22 @@ public class AdherentControleur {
     // ── Action : Modifier un adhérent ─────────────────────────────────────────
 
     private void ouvrirFormulaireModification(Adherent adherent,
-                                               RechercheAdherentVue vueRecherche) {
+                                                RechercheAdherentVue vueRecherche) {
+        if (!verifierDroit(Droit.GESTION_ADHERENTS)) {
+            return;
+        }
+
         FormulaireAdherentVue formulaire =
                 new FormulaireAdherentVue(fenetrePrincipale,
-                        "Modifier — " + adherent.getPrenom() + " " + adherent.getNom());
+                        "Modifier un adhérent — " + adherent.getPrenom() + " " + adherent.getNom());
 
-        // Pré-remplissage
         formulaire.setChampNom(adherent.getNom());
         formulaire.setChampPrenom(adherent.getPrenom());
         formulaire.setChampNomNaissance(adherent.getNomNaissance());
         if (adherent.getDateNaissance() != null) {
             formulaire.setChampDateNaissance(
-                    adherent.getDateNaissance().format(ValidateurAdherent.FORMAT_DATE));
+                    adherent.getDateNaissance().format(
+                            java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")));
         }
         formulaire.setChampAdresse(adherent.getAdresse());
         formulaire.setChampCodePostal(adherent.getCodePostal());
@@ -224,6 +404,10 @@ public class AdherentControleur {
     private void enregistrerAdherentDepuisFormulaire(FormulaireAdherentVue formulaire,
                                                     Integer idOriginal,
                                                     RechercheAdherentVue vueRecherche) {
+        if (!verifierDroit(Droit.GESTION_ADHERENTS)) {
+            return;
+        }
+
         formulaire.effacerErreur();
 
         LocalDate dateNaissance;
@@ -310,6 +494,10 @@ public class AdherentControleur {
     // ── Action : Annuaire des clubs ────────────────────────────────────────────
 
     private void ouvrirAnnuaireClubs() {
+        if (!verifierDroit(Droit.CONSULTATION_CLUBS)) {
+            return;
+        }
+
         List<Club> clubs = clubRepository.chargerClubs(CHEMIN_CLUBS);
 
         if (clubs.isEmpty()) {
@@ -323,13 +511,28 @@ public class AdherentControleur {
         clubRepository.anonymiserDonnees(clubs);
 
         AnnuaireClubsVue vue = new AnnuaireClubsVue(fenetrePrincipale, clubs);
-        vue.ajouterEcouteurImprimer(e -> vue.imprimerTableau());
-        vue.ajouterEcouteurExporterHtml(e -> exporterAnnuaireHtml(vue, clubs));
+        boolean peutImprimer = authManager.aLeDroit(Droit.IMPRESSION_CLUBS);
+        vue.setDroitImpression(peutImprimer);
+
+        vue.ajouterEcouteurImprimer(e -> {
+            if (!verifierDroit(Droit.IMPRESSION_CLUBS)) return;
+            vue.imprimerTableau();
+        });
+
+        vue.ajouterEcouteurExporterHtml(e -> {
+            if (!verifierDroit(Droit.IMPRESSION_CLUBS)) return;
+            exporterAnnuaireHtml(vue, clubs);
+        });
+
         vue.setVisible(true);
     }
 
     /** Exporte l'annuaire anonymisé au format HTML imprimable. */
     private void exporterAnnuaireHtml(AnnuaireClubsVue parent, List<Club> clubs) {
+        if (!verifierDroit(Droit.IMPRESSION_CLUBS)) {
+            return;
+        }
+
         JFileChooser chooser = new JFileChooser();
         chooser.setDialogTitle("Exporter l'annuaire des clubs en HTML");
         chooser.setFileFilter(new FileNameExtensionFilter("Pages HTML (*.html)", "html"));
@@ -357,6 +560,10 @@ public class AdherentControleur {
     // ── Action : Récapitulatif financier ──────────────────────────────────────
 
     private void ouvrirRecapitulatifFinancier() {
+        if (!verifierDroit(Droit.GESTION_FINANCES)) {
+            return;
+        }
+
         List<Categorie> cats = chargerCategories();
         if (cats.isEmpty()) {
             return;
@@ -440,6 +647,10 @@ public class AdherentControleur {
     // ── Action : Exporter les données ─────────────────────────────────────────
 
     private void exporterDonnees() {
+        if (!verifierDroit(Droit.SAUVEGARDE_RESTAURATION)) {
+            return;
+        }
+
         if (manager.getListeAdherents().isEmpty()) {
             JOptionPane.showMessageDialog(fenetrePrincipale,
                     "Aucun adhérent à exporter.",
@@ -491,6 +702,10 @@ public class AdherentControleur {
     // ── Action : Importer les données ─────────────────────────────────────────
 
     private void importerDonnees() {
+        if (!verifierDroit(Droit.SAUVEGARDE_RESTAURATION)) {
+            return;
+        }
+
         JFileChooser chooser = new JFileChooser();
         chooser.setDialogTitle("Importer les données des adhérents");
         chooser.setFileFilter(new FileNameExtensionFilter("Fichiers de sauvegarde (*.gea)", "gea"));
@@ -619,19 +834,18 @@ public class AdherentControleur {
 
     // ── Utilitaires privés ─────────────────────────────────────────────────────
 
-    /** Charge les catégories depuis le fichier XML. Retourne liste vide si erreur. */
     private List<Categorie> chargerCategories() {
         try {
             return categorieRepository.chargerCategories(CHEMIN_CATEGORIES);
-        } catch (Exception e) {
+        } catch (Exception ex) {
             JOptionPane.showMessageDialog(fenetrePrincipale,
-                    "Impossible de charger les catégories :\n" + e.getMessage(),
-                    "Erreur XML", JOptionPane.WARNING_MESSAGE);
-            return new java.util.ArrayList<>();
+                    "Impossible de charger les catégories (" + CHEMIN_CATEGORIES + ") :\n"
+                            + ex.getMessage(),
+                    "Erreur XML", JOptionPane.ERROR_MESSAGE);
+            return List.of();
         }
     }
 
-    /** Recherche un adhérent par son identifiant dans la liste du manager. */
     private Adherent trouverParId(int id) {
         return manager.getListeAdherents().stream()
                 .filter(a -> a.getId() == id)
@@ -639,10 +853,7 @@ public class AdherentControleur {
                 .orElse(null);
     }
 
-    // ── Getter ─────────────────────────────────────────────────────────────────
-
-    public AdherentManager getManager() {
-        return manager;
+    public AuthentificationManager getAuthentificationManager() {
+        return authManager;
     }
 }
-

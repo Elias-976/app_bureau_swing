@@ -81,11 +81,16 @@ public final class OutilAssertions {
         nombreAssertions++;
     }
 
+    @FunctionalInterface
+    public interface ActionTest {
+        void executer() throws Throwable;
+    }
+
     public static <T extends Throwable> T assertThrows(Class<T> typeAttendu,
-                                                       Runnable action,
+                                                       ActionTest action,
                                                        String message) {
         try {
-            action.run();
+            action.executer();
         } catch (Throwable t) {
             if (typeAttendu.isInstance(t)) {
                 nombreAssertions++;
@@ -102,3 +107,4 @@ public final class OutilAssertions {
                         message, typeAttendu.getSimpleName()));
     }
 }
+

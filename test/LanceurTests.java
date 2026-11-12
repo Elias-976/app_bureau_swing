@@ -15,6 +15,7 @@ public final class LanceurTests {
         echecs += executerSuite("ValidateurAdherentTest (US13)", ValidateurAdherentTest::executer);
         echecs += executerSuite("RecapitulatifFinancierTest (US9)", RecapitulatifFinancierTest::executer);
         echecs += executerSuite("SauvegardeEtAnnuaireTest (US10/US11/US7)", SauvegardeEtAnnuaireTest::executer);
+        echecs += executerSuite("AuthentificationTest (Sécurité & RBAC)", AuthentificationTest::executer);
 
         System.out.println("============================================================");
         System.out.printf("Total assertions vérifiées : %d | Suites en échec : %d%n",
@@ -43,3 +44,4 @@ public final class LanceurTests {
         }
     }
 }
+

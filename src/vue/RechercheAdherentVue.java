@@ -32,6 +32,7 @@ public class RechercheAdherentVue extends JDialog {
     private JButton btnVoirFiche;
     private JButton btnModifier;
     private JButton btnSupprimer;
+    private boolean droitModification = true;
 
     // ── En-têtes des colonnes du tableau ──────────────────────────────────────
     private static final String[] COLONNES = {
@@ -130,8 +131,8 @@ public class RechercheAdherentVue extends JDialog {
         tableauResultats.getSelectionModel().addListSelectionListener(e -> {
             boolean selection = tableauResultats.getSelectedRow() >= 0;
             btnVoirFiche.setEnabled(selection);
-            btnModifier.setEnabled(selection);
-            btnSupprimer.setEnabled(selection);
+            btnModifier.setEnabled(selection && droitModification);
+            btnSupprimer.setEnabled(selection && droitModification);
         });
 
         // Double-clic → voir la fiche
@@ -228,6 +229,18 @@ public class RechercheAdherentVue extends JDialog {
 
     public String getCritereRecherche() {
         return champRecherche.getText().trim();
+    }
+
+    /**
+     * Active ou désactive les boutons de modification et de suppression
+     * selon les habilitations RBAC de l'utilisateur.
+     *
+     * @param autorise {@code true} si l'utilisateur peut modifier/supprimer
+     */
+    public void setDroitModification(boolean autorise) {
+        this.droitModification = autorise;
+        btnModifier.setVisible(autorise);
+        btnSupprimer.setVisible(autorise);
     }
 }
 

@@ -184,5 +184,14 @@ public class FicheAdherentVue extends JDialog {
     public void ajouterEcouteurModifier(ActionListener ecouteur) {
         btnModifier.addActionListener(ecouteur);
     }
+
+    /**
+     * Active ou masque le bouton Modifier selon les droits de l'utilisateur.
+     *
+     * @param autorise {@code true} si la modification est permise
+     */
+    public void setDroitModification(boolean autorise) {
+        btnModifier.setVisible(autorise);
+    }
 }
 

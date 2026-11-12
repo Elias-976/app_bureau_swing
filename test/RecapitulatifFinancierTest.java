@@ -100,3 +100,4 @@ public final class RecapitulatifFinancierTest {
                 "Mention des adhérents sans catégorie");
     }
 }
+

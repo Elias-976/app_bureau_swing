@@ -160,6 +160,20 @@ public class AnnuaireClubsVue extends JDialog {
     }
 
     /**
+     * Active ou désactive les boutons d'impression et d'export HTML selon les droits RBAC.
+     *
+     * @param autorise {@code true} si l'utilisateur possède le droit d'impression
+     */
+    public void setDroitImpression(boolean autorise) {
+        btnImprimer.setEnabled(autorise);
+        btnExporterHtml.setEnabled(autorise);
+        if (!autorise) {
+            btnImprimer.setToolTipText("Impression réservée au président du club");
+            btnExporterHtml.setToolTipText("Export HTML réservé au président du club");
+        }
+    }
+
+    /**
      * Génère une page HTML autonome et imprimable de l'annuaire des clubs.
      *
      * @param clubs la liste des clubs à mettre en forme

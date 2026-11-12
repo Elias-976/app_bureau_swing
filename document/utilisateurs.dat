@@ -1,0 +1,7 @@
+# Fichier de comptes sécurisé — Application GEA (M2L)
+# Algorithme: PBKDF2WithHmacSHA256 (65536 itérations, 256 bits, sel aléatoire)
+# Format: identifiant:selBase64:hashBase64:role:nomComplet:bloque:tentativesEchouees
+secretaire:84AJR6jqD7936utGmXvTUA==:KM5n1UXE3qhbwTiPVSXFocfN0Ch0tMkfhI89EyO1ExE=:SECRETAIRE:Sophie Bernard (Secrétaire):false:0
+tresorier:+xlxXIL+KhtYdOTyHQ+GLw==:vucdYTPJbj3K2MhpLt32cHYZKqBLpzsZPikIogBzYME=:TRESORIER:Marc Lefebvre (Trésorier):false:0
+president:noq5tW9yJwcH2Zal8s2HTw==:M9i8gxuiZqg65DCZtYndO4BDBawpwk2tjIW2rm7BH/w=:PRESIDENT:Claire Thomas (Présidente):false:0
+admin:HuWbS2hXkrFflecvheUabA==:tDRDcC4KBP4iKgfEL2+XDsBXbqDb9zSMuas9SKgV7Wk=:ADMINISTRATEUR:Informaticien bénévole M2L:false:0
